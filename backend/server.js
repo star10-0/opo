@@ -13,6 +13,11 @@ import reportRoutes from "./routes/reportRoutes.js";
 import shiftRoutes from "./routes/shiftRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import gpsRoutes from "./routes/gpsRoutes.js";
+import pumpRoutes from "./routes/pumpRoutes.js";
+import operationalDayRoutes from "./routes/operationalDayRoutes.js";
+import pumpAssignmentRoutes from "./routes/pumpAssignmentRoutes.js";
+import meterReadingRoutes from "./routes/meterReadingRoutes.js";
+import fuelPricePeriodRoutes from "./routes/fuelPricePeriodRoutes.js";
 
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -39,6 +44,11 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/gps", gpsRoutes);
+app.use("/api/pumps", pumpRoutes);
+app.use("/api/operational-days", operationalDayRoutes);
+app.use("/api/pump-assignments", pumpAssignmentRoutes);
+app.use("/api/meter-readings", meterReadingRoutes);
+app.use("/api/price-periods", fuelPricePeriodRoutes);
 
 app.use(errorHandler);
 
