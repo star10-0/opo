@@ -1,0 +1,134 @@
+# API Contract
+
+## Response format
+### Success
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": {}
+}
+
+### Error
+{
+  "success": false,
+  "message": "Operation failed",
+  "error": "Error details"
+}
+
+## Stations
+### GET /api/stations
+- الهدف: جلب المحطات المسموح بها للمستخدم
+
+### POST /api/stations
+- الهدف: إنشاء محطة
+- الصلاحية: المدير
+
+## Users
+### GET /api/users
+- الهدف: جلب المستخدمين
+- الصلاحية: المدير
+
+### POST /api/users
+- الهدف: إنشاء مستخدم
+- الصلاحية: المدير
+
+## Storage Tanks
+### GET /api/tanks
+- الهدف: جلب الخزانات حسب المحطة
+
+### POST /api/tanks
+- الهدف: إنشاء خزان
+- الصلاحية: المدير
+
+## Tank Deliveries
+### GET /api/deliveries
+- الهدف: جلب عمليات الصهاريج
+
+### POST /api/deliveries
+- الهدف: تسجيل صهريج وارد
+- الصلاحية: عامل أو مدير حسب السياسة
+
+### PUT /api/deliveries/:id
+- الهدف: تعديل صهريج
+- الصلاحية: حسب حالة السجل والموافقة
+
+## Operational Day
+### GET /api/operational-days/current?stationId=
+- الهدف: جلب اليوم التشغيلي الحالي
+
+### POST /api/operational-days/open
+- الهدف: فتح يوم تشغيلي
+- الصلاحية: system أو المدير
+
+### POST /api/operational-days/:id/close
+- الهدف: إغلاق اليوم التشغيلي
+
+## Pump Assignments
+### POST /api/pump-assignments
+- الهدف: فتح استلام مضخة
+
+### POST /api/pump-assignments/:id/lock-opening
+- الهدف: تثبيت رقم البداية
+
+### POST /api/pump-assignments/:id/close
+- الهدف: إغلاق استلام المضخة
+
+## Meter Readings
+### POST /api/meter-readings
+- الهدف: تسجيل قراءة
+- readingType:
+  - opening
+  - price_change_marker
+  - closing
+  - correction
+
+## Fuel Price Periods
+### POST /api/price-periods
+- الهدف: بدء فترة سعر جديدة
+
+### POST /api/price-periods/:id/close
+- الهدف: إغلاق فترة سعر
+
+## Worker Closings
+### POST /api/worker-closings
+- الهدف: إنشاء أو تحديث حساب عامل
+
+### POST /api/worker-closings/:id/submit
+- الهدف: إرسال الحساب للمحاسب
+
+## Expenses
+### POST /api/expenses
+- الهدف: تسجيل مصروف على حساب عامل
+
+## Distribution Vehicles
+### GET /api/distribution-vehicles
+- الهدف: جلب سيارات التوزيع
+
+### POST /api/distribution-vehicles
+- الهدف: إنشاء سيارة توزيع
+
+## Distribution Vehicle Sessions
+### POST /api/distribution-vehicle-sessions
+- الهدف: بدء جلسة سيارة توزيع
+
+### POST /api/distribution-vehicle-sessions/:id/close
+- الهدف: إغلاق جلسة سيارة توزيع
+
+## Reconciliation
+### POST /api/reconciliation/:operationalDayId/review
+- الهدف: مراجعة المحاسب واعتماد أو تعليق
+
+## Approvals
+### POST /api/approval-requests
+- الهدف: إنشاء طلب موافقة
+
+### POST /api/approval-requests/:id/accountant-decision
+- الهدف: قرار المحاسب
+
+### POST /api/approval-requests/:id/manager-decision
+- الهدف: قرار المدير
+
+## Reports
+### GET /api/reports/daily?stationId=&date=
+### GET /api/reports/weekly?stationId=&from=&to=
+### GET /api/reports/monthly?stationId=&monthKey=

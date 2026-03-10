@@ -1,0 +1,55 @@
+import express from "express";
+import DailyReport from "../models/DailyReport.js";
+
+const router = express.Router();
+
+router.post("/generate", async(req,res)=>{
+ try{
+
+  const report = new DailyReport(req.body);
+
+  report.netAmount =
+   report.totalSales -
+   report.totalExpenses -
+   report.bankPayments;
+
+  await report.save();
+
+  res.json(report);
+
+ }catch(err){
+  res.status(500).json(err.message);
+ }
+});
+
+router.get("/pending", async(req,res)=>{
+ try{
+   const reports = await DailyReport.find({status:"pending"})
+   .populate("worker shift");
+   res.json(reports);
+ }catch(err){
+   res.status(500).json(err.message);
+ }
+});
+
+router.put("/approve/:id", async(req,res)=>{
+ try{
+
+   const report = await DailyReport.findByIdAndUpdate(
+     req.params.id,
+     {
+       status:"approved",
+       approvedBy:req.body.accountant,
+       approvedAt:new Date()
+     },
+     {new:true}
+   );
+
+   res.json(report);
+
+ }catch(err){
+   res.status(500).json(err.message);
+ }
+});
+
+export default router;
