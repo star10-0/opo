@@ -1,95 +1,138 @@
-﻿import { useMemo, useState } from "react";
-import Tanks from "./Tanks";
-import Payments from "./Payments";
-import GPS from "./GPS";
+import { useEffect, useMemo, useState } from "react";
+import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi } from "../api";
+import { can } from "../lib/permissions";
+import { EmptyState, ErrorState, LoadingState } from "../components/Feedback";
+import OperationalDayPage from "./OperationalDayPage";
+import PumpAssignmentsPage from "./PumpAssignmentsPage";
+import WorkerClosingPage from "./WorkerClosingPage";
+import DeliveriesPage from "./DeliveriesPage";
+import StorageTanksPage from "./StorageTanksPage";
+import DistributionVehiclePage from "./DistributionVehiclePage";
+import ReportsPage from "./ReportsPage";
+
+const TABS = [
+  { key: "dashboard", label: "Dashboard", permission: "view_dashboard" },
+  { key: "operational-day", label: "Operational Day", permission: "view_dashboard" },
+  { key: "pump-assignments", label: "Pump Assignments", permission: "open_pump_assignment" },
+  { key: "worker-closing", label: "Worker Closing", permission: "submit_own_closing" },
+  { key: "deliveries", label: "Deliveries", permission: "register_delivery" },
+  { key: "tanks", label: "Storage Tanks", permission: "manage_tanks" },
+  { key: "distribution", label: "Distribution Vehicle", permission: "manage_distribution_vehicles" },
+  { key: "reports", label: "Reports", permission: "view_reports" }
+];
 
 function Dashboard() {
-  const storedRole = localStorage.getItem("role") || "worker";
-  const storedName = localStorage.getItem("userName") || "مستخدم النظام";
-  const [tab, setTab] = useState("tanks");
-
-  const role = useMemo(() => storedRole, [storedRole]);
+  const userName = localStorage.getItem("userName") || "مستخدم النظام";
+  const role = localStorage.getItem("role") || "worker";
+  const visibleTabs = useMemo(() => TABS.filter((t) => can(t.permission) || role === "admin"), [role]);
+  const [tab, setTab] = useState(visibleTabs[0]?.key || "dashboard");
+  const [stations, setStations] = useState([]);
+  const [stationId, setStationId] = useState(localStorage.getItem("stationId") || "");
+  const [summary, setSummary] = useState({ loading: true, error: "", data: null });
 
   const logout = () => {
     localStorage.clear();
     window.location.href = "/";
   };
 
-  return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc" }}>
-      <aside style={sidebar}>
-        <h2 style={{ marginTop: 0 }}>لوحة التحكم</h2>
-        <div style={userBox}>
-          <div>الاسم: {storedName}</div>
-          <div>الصلاحية: {role}</div>
+  useEffect(() => {
+    stationApi
+      .list()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.items || [];
+        setStations(list);
+        const first = stationId || list[0]?._id;
+        if (first) {
+          setStationId(first);
+          localStorage.setItem("stationId", first);
+        }
+      })
+      .catch(() => setStations([]));
+  }, []);
+
+  useEffect(() => {
+    if (!stationId) return;
+    setSummary({ loading: true, error: "", data: null });
+    Promise.allSettled([
+      reportsApi.daily(stationId, new Date().toISOString().slice(0, 10)),
+      storageTanksApi.list(stationId),
+      deliveriesApi.list({ stationId, limit: 5 }),
+      workerClosingsApi.list({ stationId, status: "pending" }),
+      reportsApi.weekly(stationId, new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)),
+      reportsApi.monthly(stationId, `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`),
+      reportsApi.distributionVehicle(stationId, new Date().toISOString().slice(0, 10))
+    ]).then((results) => {
+      const errors = results.filter((r) => r.status === "rejected");
+      const data = results.map((r) => (r.status === "fulfilled" ? r.value : null));
+      setSummary({
+        loading: false,
+        error: errors.length ? "بعض مؤشرات Dashboard غير متاحة حاليًا (TODO backend)." : "",
+        data
+      });
+    });
+  }, [stationId]);
+
+  const renderHome = () => {
+    if (summary.loading) return <LoadingState />;
+    if (!summary.data) return <EmptyState text="لا توجد بيانات للعرض" />;
+    const [daily, tanks, deliveries, pending, weekly, monthly, vehicleSales] = summary.data;
+
+    return (
+      <div>
+        {summary.error ? <ErrorState error={summary.error} /> : null}
+        <div style={grid}>
+          <Card title="مبيعات اليوم" value={daily?.totals?.totalAmount ?? "--"} />
+          <Card title="الفروقات المالية" value={daily?.totals?.totalVariance ?? "--"} />
+          <Card title="حالة الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
+          <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
+          <Card title="الحسابات المعلقة" value={Array.isArray(pending) ? pending.length : pending?.items?.length ?? "--"} />
+          <Card title="مبيعات سيارة التوزيع" value={vehicleSales?.totals?.totalAmount ?? "TODO"} />
+          <Card title="مقارنة أسبوعية" value={weekly?.comparisons ? "متاح" : "TODO"} />
+          <Card title="مقارنة شهرية" value={monthly?.comparisons ? "متاح" : "TODO"} />
         </div>
+      </div>
+    );
+  };
 
-        <button style={menuBtn} onClick={() => setTab("tanks")}>
-          الصهاريج
-        </button>
-
-        {(role === "accountant" || role === "admin") && (
-          <button style={menuBtn} onClick={() => setTab("payments")}>
-            المدفوعات
-          </button>
-        )}
-
-        {role === "admin" && (
-          <button style={menuBtn} onClick={() => setTab("gps")}>
-            مراقبة GPS
-          </button>
-        )}
-
-        <button style={logoutBtn} onClick={logout}>
-          تسجيل الخروج
-        </button>
+  return (
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <aside style={sidebar}>
+        <h2>لوحة التحكم</h2>
+        <p>{userName}</p>
+        <p>{role}</p>
+        <select value={stationId} onChange={(e) => setStationId(e.target.value)} style={select}>
+          {stations.map((s) => (
+            <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>
+          ))}
+        </select>
+        {visibleTabs.map((t) => (
+          <button key={t.key} style={menuBtn} onClick={() => setTab(t.key)}>{t.label}</button>
+        ))}
+        <button style={logoutBtn} onClick={logout}>تسجيل الخروج</button>
       </aside>
-
-      <main style={{ flex: 1, padding: 24 }}>
-        {tab === "tanks" && <Tanks />}
-        {tab === "payments" && <Payments />}
-        {tab === "gps" && <GPS />}
+      <main style={{ flex: 1, padding: 20 }}>
+        {tab === "dashboard" && renderHome()}
+        {tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
+        {tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
+        {tab === "worker-closing" && <WorkerClosingPage stationId={stationId} />}
+        {tab === "deliveries" && <DeliveriesPage stationId={stationId} />}
+        {tab === "tanks" && <StorageTanksPage stationId={stationId} />}
+        {tab === "distribution" && <DistributionVehiclePage stationId={stationId} />}
+        {tab === "reports" && <ReportsPage stationId={stationId} />}
       </main>
     </div>
   );
 }
 
-const sidebar = {
-  width: 260,
-  background: "#111827",
-  color: "#fff",
-  padding: 20
-};
+function Card({ title, value }) {
+  return <div style={card}><div>{title}</div><strong>{value}</strong></div>;
+}
 
-const userBox = {
-  background: "#1f2937",
-  padding: 14,
-  borderRadius: 10,
-  marginBottom: 20,
-  lineHeight: 1.9
-};
-
-const menuBtn = {
-  width: "100%",
-  background: "#1f2937",
-  color: "#fff",
-  border: "none",
-  padding: "12px",
-  marginBottom: 10,
-  borderRadius: 8,
-  cursor: "pointer",
-  textAlign: "right"
-};
-
-const logoutBtn = {
-  width: "100%",
-  background: "#dc2626",
-  color: "#fff",
-  border: "none",
-  padding: "12px",
-  marginTop: 20,
-  borderRadius: 8,
-  cursor: "pointer"
-};
+const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 };
+const card = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 14 };
+const sidebar = { width: 260, background: "#111827", color: "#fff", padding: 16 };
+const menuBtn = { width: "100%", marginBottom: 8, padding: 10, textAlign: "right", border: "none", borderRadius: 6 };
+const logoutBtn = { width: "100%", padding: 10, marginTop: 10, background: "#dc2626", color: "#fff", border: "none", borderRadius: 6 };
+const select = { width: "100%", padding: 10, marginBottom: 10 };
 
 export default Dashboard;
