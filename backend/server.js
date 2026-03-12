@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
 import auth from "./middleware/auth.js";
@@ -35,12 +36,19 @@ const allowedOrigins = (process.env.FRONTEND_URL || "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const corsOrigin = (origin, callback) => {
+  if (!origin) return callback(null, true);
+  if (!allowedOrigins.length) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("CORS origin not allowed"));
+};
+
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: allowedOrigins.length ? allowedOrigins : true,
+    origin: corsOrigin,
     credentials: true,
   })
 );
@@ -56,7 +64,17 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, status: "ok", authEnforced: enforceAuth });
+  const dbReady = [1, 2].includes(Number(mongoose.connection.readyState));
+  res.json({
+    success: true,
+    status: "ok",
+    authEnforced: enforceAuth,
+    environment: process.env.NODE_ENV || "development",
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    allowedOrigins: allowedOrigins.length ? allowedOrigins : ["*"],
+    dbConnected: dbReady,
+  });
 });
 
 if (enforceAuth) {
@@ -101,6 +119,8 @@ const start = async () => {
 
   server = app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
+    console.log(`🔐 Auth enforced: ${enforceAuth ? "yes" : "no"}`);
+    console.log(`🌐 Allowed origins: ${allowedOrigins.length ? allowedOrigins.join(", ") : "*"}`);
   });
 };
 

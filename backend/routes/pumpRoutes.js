@@ -1,4 +1,5 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createPumpHandler,
   listPumpsHandler,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/", createPumpHandler);
-router.get("/", listPumpsHandler);
-router.get("/:id", getPumpByIdHandler);
-router.put("/:id", updatePumpHandler);
-router.delete("/:id", deletePumpHandler);
+router.get("/", requireAuthIfEnabled, listPumpsHandler);
+router.get("/:id", requireAuthIfEnabled, getPumpByIdHandler);
+router.post("/", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), createPumpHandler);
+router.put("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), updatePumpHandler);
+router.delete("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), deletePumpHandler);
 
 export default router;

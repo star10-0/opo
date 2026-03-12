@@ -1,4 +1,5 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createMeterReadingHandler,
   listMeterReadingsHandler,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/", createMeterReadingHandler);
-router.get("/", listMeterReadingsHandler);
-router.get("/:id", getMeterReadingByIdHandler);
-router.put("/:id", updateMeterReadingHandler);
-router.delete("/:id", deleteMeterReadingHandler);
+router.get("/", requireAuthIfEnabled, listMeterReadingsHandler);
+router.get("/:id", requireAuthIfEnabled, getMeterReadingByIdHandler);
+router.post("/", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "worker"]), createMeterReadingHandler);
+router.put("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "accountant"]), updateMeterReadingHandler);
+router.delete("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), deleteMeterReadingHandler);
 
 export default router;
