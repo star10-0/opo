@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "healthcheck": "node -e \"fetch('http://localhost:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

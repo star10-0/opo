@@ -1,10 +1,13 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import WorkerClosing from "../models/WorkerClosing.js";
 import DistributionVehicleSession from "../models/DistributionVehicleSession.js";
 import TankDelivery from "../models/TankDelivery.js";
 import StorageTank from "../models/StorageTank.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "accountant"]));
 
 function getDayRange(dateValue) {
   const date = dateValue ? new Date(dateValue) : new Date();

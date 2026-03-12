@@ -32,14 +32,50 @@
 - docs/workflows.md
 - docs/roles-and-permissions.md
 
-## تشغيل المشروع
+## إعداد البيئة
+انسخ `.env.example` إلى `.env` ثم حدّث القيم المناسبة.
+
+> في الإنتاج يجب ضبط:
+> - `NODE_ENV=production`
+> - `ENFORCE_AUTH=true`
+> - `JWT_SECRET` قوي
+> - `FRONTEND_URL` على رابط الواجهة الفعلي
+
+## تشغيل المشروع (تطوير)
 ### Backend
+```bash
+cd backend
 npm install
 npm run dev
+```
 
 ### Frontend
+```bash
+cd fuel-frontend-v2
 npm install
 npm run dev
+```
+
+## جاهزية الإنتاج (بدون نشر فعلي)
+### Backend
+```bash
+cd backend
+npm run start:prod
+```
+
+### Frontend
+```bash
+cd fuel-frontend-v2
+npm run build
+npm run preview:host
+```
+
+## فحوصات سريعة
+### Backend health
+```bash
+cd backend
+npm run healthcheck
+```
 
 ## ملاحظات مهمة
 - لا تعتمد على الموديلات القديمة كما هي

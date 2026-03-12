@@ -9,13 +9,23 @@ function DeliveriesPage({ stationId }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ search: "", monthKey: "", fuelType: "", from: "", to: "" });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedFilters(filters), 350);
+    return () => clearTimeout(timeout);
+  }, [filters]);
 
   const load = async () => {
-    if (!stationId) return;
+    if (!stationId) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const data = await deliveriesApi.list({ stationId, ...filters });
+      const data = await deliveriesApi.list({ stationId, ...debouncedFilters });
       setRows(data?.items || data || []);
     } catch (e) {
       setRows([]);
@@ -25,7 +35,9 @@ function DeliveriesPage({ stationId }) {
     }
   };
 
-  useEffect(() => { load(); }, [stationId, filters.search, filters.monthKey, filters.fuelType, filters.from, filters.to]);
+  useEffect(() => {
+    load();
+  }, [stationId, debouncedFilters.search, debouncedFilters.monthKey, debouncedFilters.fuelType, debouncedFilters.from, debouncedFilters.to]);
 
   const createDemo = async () => {
     try {

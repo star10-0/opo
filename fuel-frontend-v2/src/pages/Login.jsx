@@ -30,7 +30,7 @@ function Login() {
       localStorage.setItem("userId", res.data.user._id || "");
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || t("loginFailed"));
+      setError(err.message || t("loginFailed"));
     } finally {
       setLoading(false);
     }
