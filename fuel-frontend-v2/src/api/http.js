@@ -4,7 +4,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/a
 
 const http = axios.create({
   baseURL: apiBaseUrl,
-  timeout: 10000,
+  timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
 });
 
 http.interceptors.request.use((config) => {
@@ -12,6 +12,16 @@ http.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem("token");
+    }
+    return Promise.reject(error);
+  }
+);
 
 const unwrap = (response) => {
   const payload = response?.data;
@@ -27,6 +37,7 @@ const unwrap = (response) => {
 const normalizeError = (error) => {
   const message =
     error?.response?.data?.message ||
+    (error?.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالخادم" : "") ||
     error?.message ||
     "حدث خطأ غير متوقع أثناء الاتصال بالخادم";
   return new Error(message);
