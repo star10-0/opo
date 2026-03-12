@@ -5,6 +5,12 @@ function buildFilters(query = {}) {
 
   if (query.stationId) filters.stationId = query.stationId;
   if (query.monthKey) filters.monthKey = query.monthKey;
+  if (query.fuelType) filters.fuelType = query.fuelType;
+  if (query.from || query.to) {
+    filters.deliveryDate = {};
+    if (query.from) filters.deliveryDate.$gte = query.from;
+    if (query.to) filters.deliveryDate.$lte = query.to;
+  }
   if (query.search) {
     filters.$or = [
       { driverName: { $regex: query.search, $options: "i" } },

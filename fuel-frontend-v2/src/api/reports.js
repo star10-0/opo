@@ -1,9 +1,16 @@
 import { apiGet } from "./http";
 
+const buildQuery = (params = {}) => new URLSearchParams(
+  Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "")
+).toString();
+
 export const reportsApi = {
-  daily: (stationId, date) => apiGet(`/reports/daily?stationId=${stationId}&date=${date}`),
-  weekly: (stationId, from, to) => apiGet(`/reports/weekly?stationId=${stationId}&from=${from}&to=${to}`),
-  monthly: (stationId, monthKey) => apiGet(`/reports/monthly?stationId=${stationId}&monthKey=${monthKey}`),
-  variances: (stationId, from, to) => apiGet(`/reports/variances?stationId=${stationId}&from=${from}&to=${to}`), // TODO: not in contract yet
-  distributionVehicle: (stationId, date) => apiGet(`/reports/distribution-vehicle?stationId=${stationId}&date=${date}`) // TODO: not in contract yet
+  daily: (params) => apiGet(`/reports/daily?${buildQuery(params)}`),
+  weekly: (params) => apiGet(`/reports/weekly?${buildQuery(params)}`),
+  monthly: (params) => apiGet(`/reports/monthly?${buildQuery(params)}`),
+  variances: (params) => apiGet(`/reports/variances?${buildQuery(params)}`),
+  distributionVehicle: (params) => apiGet(`/reports/distribution-vehicle?${buildQuery(params)}`),
+  deliveriesTanks: (params) => apiGet(`/reports/deliveries-tanks?${buildQuery(params)}`),
+  exportCsvUrl: (params) => `/reports/export/csv?${buildQuery(params)}`,
+  exportPdf: (params) => apiGet(`/reports/export/pdf?${buildQuery(params)}`),
 };
