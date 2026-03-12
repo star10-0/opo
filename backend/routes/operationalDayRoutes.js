@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   openOperationalDayHandler,
   closeOperationalDayHandler,
@@ -9,6 +10,8 @@ import {
 } from "../controllers/operationalDayController.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/open", openOperationalDayHandler);
 router.post("/:id/close", closeOperationalDayHandler);

@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createFuelPricePeriodHandler,
   closeFuelPricePeriodHandler,
@@ -9,6 +10,8 @@ import {
 } from "../controllers/fuelPricePeriodController.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/", createFuelPricePeriodHandler);
 router.post("/:id/close", closeFuelPricePeriodHandler);

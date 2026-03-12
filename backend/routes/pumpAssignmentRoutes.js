@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createPumpAssignmentHandler,
   lockPumpAssignmentOpeningHandler,
@@ -10,6 +11,8 @@ import {
 } from "../controllers/pumpAssignmentController.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/", createPumpAssignmentHandler);
 router.post("/:id/lock-opening", lockPumpAssignmentOpeningHandler);

@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createPumpHandler,
   listPumpsHandler,
@@ -8,6 +9,8 @@ import {
 } from "../controllers/pumpController.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/", createPumpHandler);
 router.get("/", listPumpsHandler);

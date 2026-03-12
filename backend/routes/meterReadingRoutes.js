@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createMeterReadingHandler,
   listMeterReadingsHandler,
@@ -8,6 +9,8 @@ import {
 } from "../controllers/meterReadingController.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/", createMeterReadingHandler);
 router.get("/", listMeterReadingsHandler);

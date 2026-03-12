@@ -35,7 +35,10 @@ function ReportsPage({ stationId }) {
   }), [filters]);
 
   const load = async () => {
-    if (!filters.stationId) return;
+    if (!filters.stationId) {
+      setState((prev) => ({ ...prev, loading: false, error: "يرجى اختيار محطة أولًا" }));
+      return;
+    }
     setState((s) => ({ ...s, loading: true, error: "", success: "" }));
     const requests = await Promise.allSettled([
       reportsApi.daily(query),

@@ -1,7 +1,10 @@
 import express from "express";
+import { requireAuthIfEnabled } from "../middleware/accessControl.js";
 import StorageTank from "../models/StorageTank.js";
 
 const router = express.Router();
+
+router.use(requireAuthIfEnabled);
 
 router.post("/", async (req, res) => {
   try {
