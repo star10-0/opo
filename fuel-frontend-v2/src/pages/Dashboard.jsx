@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi } from "../api";
+import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi, approvalsApi } from "../api";
 import { can, canAny } from "../lib/permissions";
 import { EmptyState, ErrorState, LoadingState } from "../components/Feedback";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -18,6 +18,9 @@ function Dashboard() {
   const { language, setLanguage, t } = useLanguage();
   const userName = localStorage.getItem("userName") || "مستخدم النظام";
   const role = localStorage.getItem("role") || "worker";
+  const today = new Date().toISOString().slice(0, 10);
+  const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+  const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
   const tabs = useMemo(() => [
     { key: "dashboard", label: t("home"), visible: can("view_dashboard") },
@@ -72,12 +75,19 @@ function Dashboard() {
       setSummary((s) => ({ ...s, loading: false }));
       return;
     }
+
     setSummary({ loading: true, error: "", data: null });
     Promise.allSettled([
-      reportsApi.daily(stationId, new Date().toISOString().slice(0, 10)),
+      reportsApi.daily({ stationId, date: today }),
+      reportsApi.weekly({ stationId, from: weekStart, to: today }),
+      reportsApi.monthly({ stationId, monthKey }),
+      reportsApi.variances({ stationId, from: weekStart, to: today }),
+      reportsApi.distributionVehicle({ stationId, from: weekStart, to: today }),
+      reportsApi.deliveriesTanks({ stationId, monthKey }),
       storageTanksApi.list(stationId),
       deliveriesApi.list({ stationId, limit: 5 }),
-      workerClosingsApi.list({ stationId, status: "pending" })
+      workerClosingsApi.list({ stationId, status: "suspended" }),
+      approvalsApi.list({ stationId, finalStatus: "pending" }),
     ]).then((results) => {
       const errors = results.filter((r) => r.status === "rejected");
       const data = results.map((r) => (r.status === "fulfilled" ? r.value : null));
@@ -86,19 +96,25 @@ function Dashboard() {
   }, [stationId]);
 
   const renderHome = () => {
-    if (summary.loading) return <LoadingState />;
+    if (summary.loading) return <LoadingState text="جارٍ تحميل مؤشرات المدير..." />;
     if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
     if (!summary.data) return <EmptyState text={t("noData")} />;
-    const [daily, tanks, deliveries, pending] = summary.data;
+
+    const [daily, weekly, monthly, variances, vehicle, tankDelivery, tanks, deliveries, suspended, approvals] = summary.data;
     return (
       <div>
         {summary.error ? <ErrorState error={summary.error} /> : null}
         <div style={grid}>
-          <Card title="مبيعات اليوم" value={daily?.totals?.totalAmount ?? "--"} />
-          <Card title="الفروقات المالية" value={daily?.totals?.totalVariance ?? "--"} />
+          <Card title="إجمالي اليوم" value={daily?.totals?.totalAmount ?? "--"} />
+          <Card title="مقارنة أسبوعية" value={weekly?.comparisons?.salesDelta ?? "--"} />
+          <Card title="مقارنة شهرية" value={monthly?.comparisons?.salesDelta ?? "--"} />
+          <Card title="ملخص الخزانات" value={tankDelivery?.totals?.tankCurrentQuantity ?? "--"} />
+          <Card title="سيارات التوزيع" value={vehicle?.totals?.totalAmount ?? "--"} />
+          <Card title="ملخص الفروقات" value={variances?.totals?.totalVariance ?? "--"} />
+          <Card title="موافقات معلقة" value={Array.isArray(approvals) ? approvals.length : approvals?.items?.length ?? "--"} />
+          <Card title="حسابات معلقة/موقوفة" value={Array.isArray(suspended) ? suspended.length : suspended?.items?.length ?? "--"} />
           <Card title="عدد الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
           <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
-          <Card title="الحسابات المعلقة" value={Array.isArray(pending) ? pending.length : pending?.items?.length ?? "--"} />
         </div>
       </div>
     );
@@ -115,7 +131,7 @@ function Dashboard() {
           <option value="ar">{t("arabic")}</option>
           <option value="en">{t("english")}</option>
         </select>
-        <select value={stationId} onChange={(e) => setStationId(e.target.value)} style={select}>
+        <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
           <option value="">{t("selectStation")}</option>
           {stations.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
         </select>
