@@ -12,12 +12,46 @@
 4. يتم تثبيت رقم البداية
 5. يبدأ العمل
 
-## 3. تغير السعر
-1. يقرر المدير تغيير السعر
-2. يتم تسجيل قراءة وسيطة
-3. تغلق فترة السعر القديمة
-4. تبدأ فترة جديدة بالسعر الجديد
-5. يستمر العمل داخل نفس اليوم التشغيلي
+## 3. تغيير السعر (المرحلة الثالثة - المسارات الصحيحة)
+### التسلسل الصحيح للعملية
+1. المدير يقرر تغيير السعر داخل نفس اليوم التشغيلي.
+2. تسجل قراءة وسيطة للمضخة (marker) عبر:
+   - `POST /api/meter-readings`
+   - `readingType = price_change_marker`
+3. تغلق فترة السعر الحالية عبر:
+   - `POST /api/price-periods/:id/close`
+4. تبدأ فترة سعر جديدة بالسعر الجديد عبر:
+   - `POST /api/price-periods`
+5. يستمر التشغيل على نفس `operationalDayId` ونفس `pumpAssignmentId`.
+
+### أخطاء المسارات الشائعة في المرحلة الثالثة
+- خطأ: `POST /api/meter-reading`
+  - الصحيح: `POST /api/meter-readings`
+- خطأ: `POST /api/price-period`
+  - الصحيح: `POST /api/price-periods`
+- خطأ: `POST /api/price-periods/close/:id`
+  - الصحيح: `POST /api/price-periods/:id/close`
+
+### الحد الأدنى من البيانات المطلوبة
+- تسجيل القراءة الوسيطة `POST /api/meter-readings`:
+  - `stationId`
+  - `operationalDayId`
+  - `pumpAssignmentId`
+  - `pumpId`
+  - `fuelType`
+  - `readingType` (يجب أن تكون `price_change_marker` في هذه المرحلة)
+  - `value`
+  - `recordedBy`
+- إغلاق فترة السعر `POST /api/price-periods/:id/close`:
+  - `endReadingValue`
+  - `endedAt` (اختياري)
+- إنشاء فترة سعر جديدة `POST /api/price-periods`:
+  - `stationId`
+  - `operationalDayId`
+  - `pumpAssignmentId`
+  - `fuelType`
+  - `pricePerLiter`
+  - `startReadingValue`
 
 ## 4. إنهاء حساب عامل
 1. يسجل العامل رقم النهاية
