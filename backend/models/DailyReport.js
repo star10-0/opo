@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const DailyReportSchema = new mongoose.Schema({
+  stationId: { type: mongoose.Schema.Types.ObjectId, ref:"Station" },
   worker: { type: mongoose.Schema.Types.ObjectId, ref:"User", required:true },
   shift: { type: mongoose.Schema.Types.ObjectId, ref:"Shift" },
   date: { type:String, required:true },

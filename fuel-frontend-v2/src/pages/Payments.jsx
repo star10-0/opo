@@ -9,7 +9,7 @@ function Payments() {
   const load = async () => {
     try {
       const res = await API.get("/payments");
-      setPayments(res.data);
+      setPayments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       setPayments([]);

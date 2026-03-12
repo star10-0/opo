@@ -18,7 +18,7 @@ router.post("/start", async(req,res)=>{
   res.json(shift);
 
  }catch(err){
-  res.status(500).json(err.message);
+  res.status(500).json({ message: err.message });
  }
 });
 
@@ -34,10 +34,14 @@ router.post("/close/:id", async(req,res)=>{
     {new:true}
   );
 
+  if (!shift) {
+    return res.status(404).json({ message: "Shift not found" });
+  }
+
   res.json(shift);
 
  }catch(err){
-  res.status(500).json(err.message);
+  res.status(500).json({ message: err.message });
  }
 });
 
@@ -46,7 +50,7 @@ router.get("/", async(req,res)=>{
   const shifts = await Shift.find().populate("worker");
   res.json(shifts);
  }catch(err){
-  res.status(500).json(err.message);
+  res.status(500).json({ message: err.message });
  }
 });
 

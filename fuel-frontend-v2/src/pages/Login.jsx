@@ -23,6 +23,7 @@ function Login() {
   const fillDemo = (role) => {
     localStorage.setItem("token", "demo-token");
     localStorage.setItem("role", role);
+    localStorage.setItem("userName", "Demo User");
     navigate("/dashboard");
   };
 

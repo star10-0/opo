@@ -13,6 +13,9 @@ router.post("/", async(req,res)=>{
   await sale.save();
 
   const tank = await Tank.findById(sale.tank);
+  if (!tank || tank.isDeleted) {
+    return res.status(404).json({ message: "Tank not found" });
+  }
   tank.currentLevel -= sale.liters;
 
   if(tank.currentLevel < 0){
@@ -24,7 +27,7 @@ router.post("/", async(req,res)=>{
   res.json(sale);
 
  }catch(err){
-  res.status(500).json(err.message);
+  res.status(500).json({ message: err.message });
  }
 });
 
@@ -33,7 +36,7 @@ router.get("/", async(req,res)=>{
    const sales = await Sale.find().populate("tank worker shift");
    res.json(sales);
  }catch(err){
-   res.status(500).json(err.message);
+   res.status(500).json({ message: err.message });
  }
 });
 
