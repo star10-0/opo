@@ -5,7 +5,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import connectDB from "./config/db.js";
-import { errorHandler } from "./middleware/errorHandler.js";
+import auth from "./middleware/auth.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 import tankRoutes from "./routes/tankRoutes.js";
 import pumpRoutes from "./routes/pumpRoutes.js";
@@ -28,10 +29,22 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 
-app.use(cors());
+const isProduction = process.env.NODE_ENV === "production";
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+
+app.set("trust proxy", 1);
+app.use(
+  cors({
+    origin: corsOrigins.length ? corsOrigins : true,
+    credentials: true,
+  })
+);
 app.use(helmet());
-app.use(express.json());
-app.use(morgan("dev"));
+app.use(express.json({ limit: "1mb" }));
+app.use(morgan(isProduction ? "combined" : "dev"));
 
 app.get("/", (req, res) => {
   res.json({
@@ -41,8 +54,10 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, status: "ok" });
+  res.json({ success: true, status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.use("/api", auth);
 
 app.use("/api/stations", stationRoutes);
 app.use("/api/tanks", tankRoutes);
@@ -63,6 +78,7 @@ app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT || 5000);
@@ -74,9 +90,17 @@ const start = async () => {
     console.warn("⚠️ تعذر الاتصال بقاعدة البيانات، سيعمل الخادم في وضع محدود.");
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
   });
+
+  const shutdown = (signal) => {
+    console.log(`📴 Received ${signal}, closing server...`);
+    server.close(() => process.exit(0));
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 start();

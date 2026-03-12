@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { deliveriesApi } from "../api";
 import { can } from "../lib/permissions";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 function DeliveriesPage({ stationId }) {
   const [rows, setRows] = useState([]);
@@ -9,13 +10,14 @@ function DeliveriesPage({ stationId }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ search: "", monthKey: "", fuelType: "", from: "", to: "" });
+  const debouncedFilters = useDebouncedValue(filters, 350);
 
   const load = async () => {
     if (!stationId) return;
     setLoading(true);
     setError("");
     try {
-      const data = await deliveriesApi.list({ stationId, ...filters });
+      const data = await deliveriesApi.list({ stationId, ...debouncedFilters });
       setRows(data?.items || data || []);
     } catch (e) {
       setRows([]);
@@ -25,7 +27,7 @@ function DeliveriesPage({ stationId }) {
     }
   };
 
-  useEffect(() => { load(); }, [stationId, filters.search, filters.monthKey, filters.fuelType, filters.from, filters.to]);
+  useEffect(() => { load(); }, [stationId, debouncedFilters]);
 
   const createDemo = async () => {
     try {

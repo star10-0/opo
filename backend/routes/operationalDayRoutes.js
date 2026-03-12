@@ -7,15 +7,16 @@ import {
   updateOperationalDayHandler,
   deleteOperationalDayHandler,
 } from "../controllers/operationalDayController.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.post("/open", openOperationalDayHandler);
-router.post("/:id/close", closeOperationalDayHandler);
-router.get("/current", listOperationalDaysHandler);
-router.get("/", listOperationalDaysHandler);
-router.get("/:id", getOperationalDayByIdHandler);
-router.put("/:id", updateOperationalDayHandler);
-router.delete("/:id", deleteOperationalDayHandler);
+router.post("/open", roleMiddleware(["manager", "admin"]), openOperationalDayHandler);
+router.post("/:id/close", roleMiddleware(["manager", "admin"]), closeOperationalDayHandler);
+router.get("/current", roleMiddleware(["worker", "accountant", "manager", "admin"]), listOperationalDaysHandler);
+router.get("/", roleMiddleware(["worker", "accountant", "manager", "admin"]), listOperationalDaysHandler);
+router.get("/:id", roleMiddleware(["worker", "accountant", "manager", "admin"]), getOperationalDayByIdHandler);
+router.put("/:id", roleMiddleware(["manager", "admin"]), updateOperationalDayHandler);
+router.delete("/:id", roleMiddleware(["manager", "admin"]), deleteOperationalDayHandler);
 
 export default router;

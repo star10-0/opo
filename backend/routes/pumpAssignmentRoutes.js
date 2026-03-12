@@ -8,15 +8,16 @@ import {
   updatePumpAssignmentHandler,
   deletePumpAssignmentHandler,
 } from "../controllers/pumpAssignmentController.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", createPumpAssignmentHandler);
-router.post("/:id/lock-opening", lockPumpAssignmentOpeningHandler);
-router.post("/:id/close", closePumpAssignmentHandler);
-router.get("/", listPumpAssignmentsHandler);
-router.get("/:id", getPumpAssignmentByIdHandler);
-router.put("/:id", updatePumpAssignmentHandler);
-router.delete("/:id", deletePumpAssignmentHandler);
+router.post("/", roleMiddleware(["worker", "manager", "admin"]), createPumpAssignmentHandler);
+router.post("/:id/lock-opening", roleMiddleware(["worker", "manager", "admin"]), lockPumpAssignmentOpeningHandler);
+router.post("/:id/close", roleMiddleware(["worker", "manager", "admin"]), closePumpAssignmentHandler);
+router.get("/", roleMiddleware(["worker", "accountant", "manager", "admin"]), listPumpAssignmentsHandler);
+router.get("/:id", roleMiddleware(["worker", "accountant", "manager", "admin"]), getPumpAssignmentByIdHandler);
+router.put("/:id", roleMiddleware(["manager", "admin"]), updatePumpAssignmentHandler);
+router.delete("/:id", roleMiddleware(["manager", "admin"]), deletePumpAssignmentHandler);
 
 export default router;

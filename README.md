@@ -2,47 +2,42 @@
 
 هذا المشروع هو نظام إدارة محطات وقود متعدد المحطات.
 
-## الهدف
-بناء نظام مستقر لإدارة:
-- المحطات
-- الأيام التشغيلية
-- استلامات المضخات
-- قراءات العدادات
-- تغير الأسعار
-- حسابات العاملين
-- سيارة التوزيع
-- الخزانات والصهاريج
-- المحاسبة والموافقات
-- التقارير وسجل النشاط
+## المتطلبات
+- Node.js 20+
+- MongoDB 6+
 
-## البنية العامة
-- كل محطة مستقلة منطقيًا
-- لكل محطة خزانات ومضخات وسيارات توزيع وتقارير وسجلات
-- اليوم التشغيلي هو الوعاء الرئيسي لكل عمليات اليوم
-- داخل اليوم التشغيلي توجد استلامات فرعية للمضخات
-- لكل استلام حساب عامل مستقل
-- المحاسب يراجع ويثبت أو يعلق
-- المدير يطّلع على النتائج بعد التثبيت
+## هيكل المشروع
+- `backend/` : Node.js + Express + MongoDB
+- `fuel-frontend-v2/` : React + Vite
+- `docs/` : قواعد العمل والعقود
 
-## أهم الملفات المرجعية
-- AGENTS.md
-- docs/business-rules.md
-- docs/database-schema.md
-- docs/api-contract.md
-- docs/workflows.md
-- docs/roles-and-permissions.md
+## التشغيل المحلي
+1. انسخ الملف البيئي:
+   - `cp .env.example .env`
+2. ثبّت الاعتمادات:
+   - `npm install --prefix backend`
+   - `npm install --prefix fuel-frontend-v2`
+3. شغّل الخدمات:
+   - `npm run dev:backend`
+   - `npm run dev:frontend`
 
-## تشغيل المشروع
-### Backend
-npm install
-npm run dev
+## أوامر التحقق
+- فحص الباك إند: `npm run check:backend`
+- بناء الواجهة: `npm run build:frontend`
+- فحص الواجهة: `npm run check:frontend`
 
-### Frontend
-npm install
-npm run dev
+## جاهزية الإنتاج (بدون نشر فعلي)
+- ضبط `NODE_ENV=production` و `AUTH_REQUIRED=true` في بيئة الإنتاج.
+- ضبط `JWT_SECRET` قوي وطويل.
+- تقييد CORS عبر `CORS_ORIGINS`.
+- توجيه الواجهة إلى API الصحيح عبر `VITE_API_BASE_URL`.
+- تشغيل الباك إند في الإنتاج: `npm --prefix backend run start:prod`.
+- تشغيل الواجهة بعد البناء عبر `vite preview` أو خلف Nginx/CDN.
 
-## ملاحظات مهمة
-- لا تعتمد على الموديلات القديمة كما هي
-- Shift القديم يجب أن يتحول إلى OperationalDay + PumpAssignment + WorkerClosing
-- Tank القديم يجب أن ينقسم إلى StorageTank + TankDelivery
-- Sale القديم يجب أن يتحول إلى SalesLedger ناتج من القراءات وفترات الأسعار
+## مراجع الأعمال
+- `AGENTS.md`
+- `docs/business-rules.md`
+- `docs/database-schema.md`
+- `docs/api-contract.md`
+- `docs/workflows.md`
+- `docs/roles-and-permissions.md`

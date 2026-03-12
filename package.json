@@ -1,0 +1,11 @@
+{
+  "name": "opo-workspace",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix fuel-frontend-v2 run dev",
+    "build:frontend": "npm --prefix fuel-frontend-v2 run build",
+    "check:backend": "npm --prefix backend run check",
+    "check:frontend": "npm --prefix fuel-frontend-v2 run check"
+  }
+}
