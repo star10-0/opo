@@ -1,5 +1,6 @@
 import ApprovalRequest from "../models/ApprovalRequest.js";
 import { auditLogService } from "./auditLogService.js";
+import { notificationService } from "./notificationService.js";
 
 function recomputeFinalStatus(request) {
   if (request.accountantDecision.decision === "rejected" || request.managerDecision.decision === "rejected") {
@@ -13,6 +14,13 @@ function recomputeFinalStatus(request) {
 }
 
 export const approvalService = {
+  async list(filters = {}) {
+    const query = { isDeleted: false };
+    if (filters.stationId) query.stationId = filters.stationId;
+    if (filters.finalStatus) query.finalStatus = filters.finalStatus;
+    return ApprovalRequest.find(query).sort({ createdAt: -1 });
+  },
+
   async create(payload, actor) {
     const request = await ApprovalRequest.create(payload);
     await auditLogService.logSensitiveAction({
@@ -24,6 +32,14 @@ export const approvalService = {
       afterData: request.toObject(),
       ipAddress: actor.ipAddress || "",
     });
+
+    await notificationService.create({
+      stationId: request.stationId,
+      targetRole: "accountant",
+      type: "approval_new",
+      message: `طلب موافقة جديد (${request.requestType}) بانتظار المراجعة`,
+    });
+
     return request;
   },
 
@@ -39,6 +55,14 @@ export const approvalService = {
     };
     recomputeFinalStatus(request);
     await request.save();
+
+    await notificationService.create({
+      stationId: request.stationId,
+      targetRole: "admin",
+      type: "approval_accountant_decision",
+      message: `قرار المحاسب (${decision.decision}) على طلب ${request.requestType}`,
+    });
+
     return request;
   },
 

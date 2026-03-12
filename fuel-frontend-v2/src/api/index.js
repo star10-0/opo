@@ -7,3 +7,7 @@ export { deliveriesApi } from "./deliveries";
 export { storageTanksApi } from "./storageTanks";
 export { distributionVehicleApi } from "./distributionVehicles";
 export { reportsApi } from "./reports";
+
+export { approvalsApi } from "./approvals";
+export { auditLogsApi } from "./auditLogs";
+export { notificationsApi } from "./notifications";

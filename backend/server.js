@@ -24,6 +24,7 @@ import auditLogRoutes from "./routes/auditLogRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import stationRoutes from "./routes/stationRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use("/api/reconciliations", reconciliationRoutes);
 app.use("/api/approval-requests", approvalRequestRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(errorHandler);
 
