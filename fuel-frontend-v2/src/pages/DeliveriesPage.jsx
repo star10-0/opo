@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { deliveriesApi } from "../api";
 import { can } from "../lib/permissions";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
@@ -10,6 +10,8 @@ function DeliveriesPage({ stationId }) {
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ search: "", monthKey: "" });
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const [submitting, setSubmitting] = useState(false);
+  const requestSeq = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedFilters(filters), 350);
@@ -17,17 +19,28 @@ function DeliveriesPage({ stationId }) {
   }, [filters]);
 
   const load = async () => {
-    if (!stationId) return;
+    const currentRequest = ++requestSeq.current;
+
+    if (!stationId) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       const data = await deliveriesApi.list({ stationId, ...debouncedFilters });
+      if (currentRequest !== requestSeq.current) return;
       setRows(data?.items || data || []);
     } catch (e) {
+      if (currentRequest !== requestSeq.current) return;
       setRows([]);
       setError(e.message || "فشل تحميل الصهاريج");
     } finally {
-      setLoading(false);
+      if (currentRequest === requestSeq.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -35,6 +48,7 @@ function DeliveriesPage({ stationId }) {
 
   const createDemo = async () => {
     try {
+      setSubmitting(true);
       setError("");
       setSuccess("");
       await deliveriesApi.create({ stationId, fuelType: "diesel", quantityLiters: 1000, deliveryDate: new Date().toISOString() });
@@ -42,11 +56,14 @@ function DeliveriesPage({ stationId }) {
       load();
     } catch (e) {
       setError(e.message || "فشل الإضافة");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const remove = async (id) => {
     try {
+      setSubmitting(true);
       setError("");
       setSuccess("");
       await deliveriesApi.softDelete(id);
@@ -54,6 +71,8 @@ function DeliveriesPage({ stationId }) {
       load();
     } catch (e) {
       setError(e.message || "فشل الحذف");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -63,7 +82,7 @@ function DeliveriesPage({ stationId }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <input placeholder="بحث" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} />
         <input placeholder="رمز الشهر مثل 2026-03" value={filters.monthKey} onChange={(e) => setFilters((f) => ({ ...f, monthKey: e.target.value }))} />
-        {can("register_delivery") || can("manage_deliveries") ? <button onClick={createDemo}>إضافة صهريج</button> : null}
+        {can("register_delivery") || can("manage_deliveries") ? <button onClick={createDemo} disabled={submitting}>إضافة صهريج</button> : null}
       </div>
       {loading ? <LoadingState /> : null}
       {error ? <ErrorState error={error} /> : null}
@@ -74,7 +93,7 @@ function DeliveriesPage({ stationId }) {
             <tr key={r._id}>
               <td>{r.deliveryDate || "--"}</td><td>{r.monthKey || "--"}</td><td>{r.driverName || "--"}</td><td>{r.truckNumber || "--"}</td><td>{r.quantityLiters || "--"}</td><td>{r.approvalStatus || "--"}</td>
               <td>
-                {(can("manage_deliveries") && !r.isDeleted) ? <button onClick={() => remove(r._id)}>حذف منطقي</button> : null}
+                {(can("manage_deliveries") && !r.isDeleted) ? <button onClick={() => remove(r._id)} disabled={submitting}>حذف منطقي</button> : null}
               </td>
             </tr>
           ))}

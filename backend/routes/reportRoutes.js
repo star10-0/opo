@@ -1,73 +1,52 @@
 import express from "express";
-import WorkerClosing from "../models/WorkerClosing.js";
-import DistributionVehicleSession from "../models/DistributionVehicleSession.js";
 import roleMiddleware from "../middleware/roleMiddleware.js";
+import { reportService } from "../services/reportService.js";
 
 const router = express.Router();
 router.use(roleMiddleware(["admin", "accountant"]));
 
-function sumTotals(rows = []) {
-  return rows.reduce(
-    (acc, row) => {
-      acc.totalAmount += Number(row.grossSalesAmount || row.totalAmount || 0);
-      acc.totalVariance += Number(row.variance || 0);
-      return acc;
-    },
-    { totalAmount: 0, totalVariance: 0 }
-  );
-}
-
-router.get("/daily", async (req, res) => {
+router.get("/daily", async (req, res, next) => {
   try {
-    const { stationId } = req.query;
-    const rows = await WorkerClosing.find({ stationId, isDeleted: false }).sort({ createdAt: -1 });
-    res.json({ success: true, data: { totals: sumTotals(rows), items: rows } });
+    const data = await reportService.workerClosingSummary(req.query, { includeItems: true });
+    res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.get("/weekly", async (req, res) => {
+router.get("/weekly", async (req, res, next) => {
   try {
-    const { stationId } = req.query;
-    const rows = await WorkerClosing.find({ stationId, isDeleted: false }).sort({ createdAt: -1 });
-    res.json({ success: true, data: { totals: sumTotals(rows), comparisons: {} } });
+    const data = await reportService.workerClosingSummary(req.query, { includeComparisons: true });
+    res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.get("/monthly", async (req, res) => {
+router.get("/monthly", async (req, res, next) => {
   try {
-    const { stationId } = req.query;
-    const rows = await WorkerClosing.find({ stationId, isDeleted: false }).sort({ createdAt: -1 });
-    res.json({ success: true, data: { totals: sumTotals(rows), comparisons: {} } });
+    const data = await reportService.workerClosingSummary(req.query, { includeComparisons: true });
+    res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.get("/variances", async (req, res) => {
+router.get("/variances", async (req, res, next) => {
   try {
-    const { stationId } = req.query;
-    const rows = await WorkerClosing.find({ stationId, isDeleted: false }).sort({ createdAt: -1 });
-    res.json({ success: true, data: { totals: sumTotals(rows), items: rows } });
+    const data = await reportService.workerClosingSummary(req.query, { includeItems: true });
+    res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.get("/distribution-vehicle", async (req, res) => {
+router.get("/distribution-vehicle", async (req, res, next) => {
   try {
-    const { stationId } = req.query;
-    const rows = await DistributionVehicleSession.find({ stationId, isDeleted: false }).sort({ createdAt: -1 });
-    const totals = rows.reduce((acc, row) => {
-      acc.totalAmount += Number(row.totalAmount || 0);
-      return acc;
-    }, { totalAmount: 0 });
-    res.json({ success: true, data: { totals, items: rows } });
+    const data = await reportService.distributionVehicleSummary(req.query);
+    res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
