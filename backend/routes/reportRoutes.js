@@ -18,7 +18,7 @@ router.post("/generate", async(req,res)=>{
   res.json(report);
 
  }catch(err){
-  res.status(500).json(err.message);
+  res.status(500).json({ message: err.message });
  }
 });
 
@@ -28,7 +28,7 @@ router.get("/pending", async(req,res)=>{
    .populate("worker shift");
    res.json(reports);
  }catch(err){
-   res.status(500).json(err.message);
+   res.status(500).json({ message: err.message });
  }
 });
 
@@ -45,10 +45,14 @@ router.put("/approve/:id", async(req,res)=>{
      {new:true}
    );
 
+   if (!report) {
+     return res.status(404).json({ message: "Report not found" });
+   }
+
    res.json(report);
 
  }catch(err){
-   res.status(500).json(err.message);
+   res.status(500).json({ message: err.message });
  }
 });
 

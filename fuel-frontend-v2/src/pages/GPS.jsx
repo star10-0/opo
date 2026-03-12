@@ -8,7 +8,7 @@ function GPS() {
 
   useEffect(() => {
     API.get("/gps")
-      .then((res) => setGps(res.data))
+      .then((res) => setGps(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
         setGps([]);

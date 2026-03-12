@@ -16,10 +16,10 @@ router.post("/", async (req,res)=>{
 
 router.get("/", async(req,res)=>{
  try{
-   const tanks = await Tank.find().sort({createdAt:-1});
+   const tanks = await Tank.find({ isDeleted: false }).sort({createdAt:-1});
    res.json(tanks);
  }catch(err){
-   res.status(500).json(err.message);
+   res.status(500).json({ message: err.message });
  }
 });
 
@@ -34,10 +34,17 @@ router.put("/:id", async(req,res)=>{
 
 router.delete("/:id", async(req,res)=>{
  try{
-   await Tank.findByIdAndDelete(req.params.id);
+   const tank = await Tank.findByIdAndUpdate(
+    req.params.id,
+    { isDeleted: true, deletedAt: new Date() },
+    { new: true }
+   );
+   if (!tank) {
+    return res.status(404).json({ message: "Tank not found" });
+   }
    res.json({message:"Tank deleted"});
  }catch(err){
-   res.status(500).json(err.message);
+   res.status(500).json({ message: err.message });
  }
 });
 
