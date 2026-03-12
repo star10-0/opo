@@ -1,9 +1,12 @@
 import axios from "axios";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const runtimeApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const defaultApiBaseUrl = import.meta.env.DEV ? "http://localhost:5000/api" : "/api";
+
+export const API_BASE_URL = runtimeApiBaseUrl || defaultApiBaseUrl;
 
 const http = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: API_BASE_URL,
   timeout: 10000,
 });
 
@@ -25,6 +28,10 @@ const unwrap = (response) => {
 };
 
 const normalizeError = (error) => {
+  if (!error?.response) {
+    return new Error("تعذر الوصول إلى الخادم. تأكد من تشغيل الخدمة أو إعداد VITE_API_BASE_URL بشكل صحيح.");
+  }
+
   const message =
     error?.response?.data?.message ||
     error?.message ||

@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -28,10 +29,26 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 
-app.use(cors());
+const isProduction = process.env.NODE_ENV === "production";
+const corsOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || corsOrigins.length === 0 || corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed"));
+    },
+    credentials: true,
+  })
+);
 app.use(helmet());
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan(isProduction ? "combined" : "dev"));
 
 app.get("/", (req, res) => {
   res.json({
@@ -41,7 +58,22 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, status: "ok" });
+  const dbConnected = mongoose.connection.readyState === 1;
+  const statusCode = dbConnected ? 200 : 503;
+
+  res.status(statusCode).json({
+    success: dbConnected,
+    status: dbConnected ? "ok" : "degraded",
+    service: "backend",
+    environment: process.env.NODE_ENV || "development",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    database: {
+      connected: dbConnected,
+      state: mongoose.connection.readyState,
+      name: mongoose.connection.name || null,
+    },
+  });
 });
 
 app.use("/api/stations", stationRoutes);

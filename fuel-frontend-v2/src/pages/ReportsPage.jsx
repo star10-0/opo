@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { reportsApi } from "../api";
+import { API_BASE_URL } from "../api/http";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 function ReportsPage({ stationId }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -78,7 +78,7 @@ function ReportsPage({ stationId }) {
   const exportCsv = async (reportType) => {
     try {
       const token = localStorage.getItem("token");
-      const url = `${apiBaseUrl}${reportsApi.exportCsvUrl({ ...query, reportType })}`;
+      const url = `${API_BASE_URL}${reportsApi.exportCsvUrl({ ...query, reportType })}`;
       const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!response.ok) throw new Error("فشل التصدير");
       const blob = await response.blob();
