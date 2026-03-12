@@ -1,12 +1,18 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
+
+mongoose.set("bufferCommands", false);
 
 const connectDB = async () => {
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is not set");
+  }
+
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 3000 });
     console.log("✅ MongoDB Connected");
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);
-    process.exit(1);
+    throw error;
   }
 };
 

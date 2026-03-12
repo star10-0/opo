@@ -35,7 +35,7 @@ function ReportsPage({ stationId }) {
   if (loading) return <LoadingState />;
   return (
     <div>
-      <h3>Reports</h3>
+      <h3>التقارير</h3>
       {error ? <ErrorState error={error} /> : null}
       {!data.daily && !data.weekly && !data.monthly && !data.variances && !data.vehicle ? <EmptyState text="لا توجد تقارير متاحة" /> : null}
       <ReportCard title="تقرير يومي" report={data.daily} />
@@ -48,7 +48,7 @@ function ReportsPage({ stationId }) {
 }
 
 function ReportCard({ title, report }) {
-  return <div style={{ background: "#fff", marginBottom: 8, padding: 10, border: "1px solid #e2e8f0" }}><strong>{title}</strong><div>{report ? JSON.stringify(report?.totals || report) : "TODO / غير متاح"}</div></div>;
+  return <div style={{ background: "#fff", marginBottom: 8, padding: 10, border: "1px solid #e2e8f0" }}><strong>{title}</strong><div>{report ? JSON.stringify(report?.totals || report) : "غير متاح"}</div></div>;
 }
 
 export default ReportsPage;
