@@ -5,12 +5,13 @@ import {
   listApprovalRequests,
   managerDecision,
 } from "../controllers/approvalController.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", listApprovalRequests);
+router.get("/", roleMiddleware(["admin", "accountant"]), listApprovalRequests);
 router.post("/", createApprovalRequest);
-router.post("/:id/accountant-decision", accountantDecision);
-router.post("/:id/manager-decision", managerDecision);
+router.post("/:id/accountant-decision", roleMiddleware(["accountant"]), accountantDecision);
+router.post("/:id/manager-decision", roleMiddleware(["admin"]), managerDecision);
 
 export default router;

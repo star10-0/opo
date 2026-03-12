@@ -9,13 +9,19 @@ function DeliveriesPage({ stationId }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [filters, setFilters] = useState({ search: "", monthKey: "" });
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilters(filters), 350);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   const load = async () => {
     if (!stationId) return;
     setLoading(true);
     setError("");
     try {
-      const data = await deliveriesApi.list({ stationId, ...filters });
+      const data = await deliveriesApi.list({ stationId, ...debouncedFilters });
       setRows(data?.items || data || []);
     } catch (e) {
       setRows([]);
@@ -25,10 +31,12 @@ function DeliveriesPage({ stationId }) {
     }
   };
 
-  useEffect(() => { load(); }, [stationId, filters.search, filters.monthKey]);
+  useEffect(() => { load(); }, [stationId, debouncedFilters.search, debouncedFilters.monthKey]);
 
   const createDemo = async () => {
     try {
+      setError("");
+      setSuccess("");
       await deliveriesApi.create({ stationId, fuelType: "diesel", quantityLiters: 1000, deliveryDate: new Date().toISOString() });
       setSuccess("تمت إضافة الصهريج");
       load();
@@ -39,6 +47,8 @@ function DeliveriesPage({ stationId }) {
 
   const remove = async (id) => {
     try {
+      setError("");
+      setSuccess("");
       await deliveriesApi.softDelete(id);
       setSuccess("تم الحذف المنطقي");
       load();

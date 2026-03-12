@@ -5,7 +5,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import connectDB from "./config/db.js";
-import { errorHandler } from "./middleware/errorHandler.js";
+import auth from "./middleware/auth.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 import tankRoutes from "./routes/tankRoutes.js";
 import pumpRoutes from "./routes/pumpRoutes.js";
@@ -27,11 +28,13 @@ import deliveryRoutes from "./routes/deliveryRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
+const isProd = process.env.NODE_ENV === "production";
+const allowedOrigin = process.env.CORS_ORIGIN || "*";
 
-app.use(cors());
+app.use(cors({ origin: allowedOrigin === "*" ? true : allowedOrigin }));
 app.use(helmet());
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan(isProd ? "combined" : "dev"));
 
 app.get("/", (req, res) => {
   res.json({
@@ -43,6 +46,8 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({ success: true, status: "ok" });
 });
+
+app.use("/api", auth);
 
 app.use("/api/stations", stationRoutes);
 app.use("/api/tanks", tankRoutes);
@@ -63,6 +68,7 @@ app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT || 5000);
@@ -78,5 +84,13 @@ const start = async () => {
     console.log(`🚀 Server listening on port ${PORT}`);
   });
 };
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[UNHANDLED_REJECTION]", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[UNCAUGHT_EXCEPTION]", error);
+});
 
 start();

@@ -10,6 +10,9 @@ const http = axios.create({
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token === "demo-token") {
+    config.headers["X-Demo-Role"] = localStorage.getItem("role") || "worker";
+  }
   return config;
 });
 
@@ -25,6 +28,10 @@ const unwrap = (response) => {
 };
 
 const normalizeError = (error) => {
+  if (error?.response?.status === 401) {
+    localStorage.removeItem("token");
+  }
+
   const message =
     error?.response?.data?.message ||
     error?.message ||

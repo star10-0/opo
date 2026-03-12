@@ -1,48 +1,75 @@
-# Station System Reference
+# Fuel Station System (Multi-Station)
 
-هذا المشروع هو نظام إدارة محطات وقود متعدد المحطات.
+نظام إدارة محطات وقود متعدد المحطات (Backend + Frontend) مع تركيز على استقرار التشغيل اليومي، الصلاحيات، والتقارير.
 
-## الهدف
-بناء نظام مستقر لإدارة:
-- المحطات
-- الأيام التشغيلية
-- استلامات المضخات
-- قراءات العدادات
-- تغير الأسعار
-- حسابات العاملين
-- سيارة التوزيع
-- الخزانات والصهاريج
-- المحاسبة والموافقات
-- التقارير وسجل النشاط
+## المتطلبات
+- Node.js 20+
+- npm 10+
+- MongoDB (محلي أو سحابي)
 
-## البنية العامة
-- كل محطة مستقلة منطقيًا
-- لكل محطة خزانات ومضخات وسيارات توزيع وتقارير وسجلات
-- اليوم التشغيلي هو الوعاء الرئيسي لكل عمليات اليوم
-- داخل اليوم التشغيلي توجد استلامات فرعية للمضخات
-- لكل استلام حساب عامل مستقل
-- المحاسب يراجع ويثبت أو يعلق
-- المدير يطّلع على النتائج بعد التثبيت
+## هيكل المشروع
+- `backend/`: API بخادم Express + MongoDB
+- `fuel-frontend-v2/`: واجهة React + Vite
+- `docs/`: وثائق القواعد والكيانات والعقود
 
-## أهم الملفات المرجعية
-- AGENTS.md
-- docs/business-rules.md
-- docs/database-schema.md
-- docs/api-contract.md
-- docs/workflows.md
-- docs/roles-and-permissions.md
+## الإعداد السريع
 
-## تشغيل المشروع
-### Backend
+### 1) إعداد المتغيرات البيئية
+
+#### Backend
+```bash
+cp backend/.env.example backend/.env
+```
+ثم عدّل القيم الأساسية:
+- `MONGO_URI`
+- `JWT_SECRET`
+- `CORS_ORIGIN`
+
+#### Frontend
+```bash
+cp fuel-frontend-v2/.env.example fuel-frontend-v2/.env
+```
+وتأكد من:
+- `VITE_API_BASE_URL=http://localhost:5000/api`
+
+> لا تقم برفع `.env` إلى Git. الملفات مستثناة عبر `.gitignore`.
+
+### 2) تشغيل Backend
+```bash
+cd backend
 npm install
 npm run dev
+```
 
-### Frontend
+أوامر مفيدة:
+- `npm start`: تشغيل عادي
+- `npm run start:prod`: تشغيل بنمط production
+- `npm run check`: فحص سريع لصحة ملف الدخول
+
+### 3) تشغيل Frontend
+```bash
+cd fuel-frontend-v2
 npm install
 npm run dev
+```
 
-## ملاحظات مهمة
-- لا تعتمد على الموديلات القديمة كما هي
-- Shift القديم يجب أن يتحول إلى OperationalDay + PumpAssignment + WorkerClosing
-- Tank القديم يجب أن ينقسم إلى StorageTank + TankDelivery
-- Sale القديم يجب أن يتحول إلى SalesLedger ناتج من القراءات وفترات الأسعار
+أوامر مفيدة:
+- `npm run start`: تشغيل Vite dev
+- `npm run build`: build للإنتاج
+- `npm run preview`: معاينة build
+
+## ملاحظات أمنية (Phase 7)
+- كل مسارات `/api/*` (عدا health) تتطلب مصادقة.
+- بعض المسارات الحساسة أصبحت مقيدة بدور المستخدم (مثل `audit logs` وقرارات `approval` وإنشاء/تعديل كيانات حساسة).
+- تم تحسين رسائل أخطاء المصادقة ومنع الوصول غير المصرح.
+
+## ملاحظات نشر (Deployment Preparation)
+- اضبط `NODE_ENV=production` في backend.
+- استخدم قيمة `CORS_ORIGIN` محددة بدل `*` في الإنتاج.
+- وفّر `JWT_SECRET` قوي وعالي التعقيد.
+- تأكد من اتصال MongoDB قبل تحويل المرور الفعلي.
+
+## فحص الجاهزية قبل التسليم
+- Backend: `npm run check` + تشغيل `npm run dev`
+- Frontend: `npm run build`
+- راجع التوافق بين متغيرات `.env` في الطرفين.

@@ -1,9 +1,10 @@
 import express from "express";
 import StorageTank from "../models/StorageTank.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", async (req, res) => {
+router.post("/", roleMiddleware(["admin", "accountant"]), async (req, res) => {
   try {
     const tank = new StorageTank(req.body);
     await tank.save();
@@ -28,7 +29,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", roleMiddleware(["admin", "accountant"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
@@ -46,7 +47,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", roleMiddleware(["admin", "accountant"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },

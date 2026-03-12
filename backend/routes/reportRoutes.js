@@ -1,8 +1,10 @@
 import express from "express";
 import WorkerClosing from "../models/WorkerClosing.js";
 import DistributionVehicleSession from "../models/DistributionVehicleSession.js";
+import roleMiddleware from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
+router.use(roleMiddleware(["admin", "accountant"]));
 
 function sumTotals(rows = []) {
   return rows.reduce(
