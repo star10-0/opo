@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import OperationalDay from "../models/OperationalDay.js";
 
 const createServiceError = (message, statusCode = 400) => {
@@ -51,7 +52,7 @@ export const closeOperationalDay = async (id) => {
 
 export const listOperationalDays = async (query = {}) => {
   const filters = { isDeleted: false };
-  if (query.stationId) filters.stationId = query.stationId;
+  if (query.stationId && mongoose.Types.ObjectId.isValid(query.stationId)) filters.stationId = query.stationId;
   if (query.status) filters.status = query.status;
   return OperationalDay.find(filters).sort({ operationalDate: -1, createdAt: -1 });
 };

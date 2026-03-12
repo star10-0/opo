@@ -20,7 +20,8 @@ const TankDeliverySchema = new mongoose.Schema(
     targetTankId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "StorageTank",
-      required: true
+      required: false,
+      default: null
     },
     quantityLiters: { type: Number, required: true, min: 0 },
     arrivalTime: { type: Date },
@@ -28,7 +29,7 @@ const TankDeliverySchema = new mongoose.Schema(
     unloadEndTime: { type: Date },
     unloadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     notes: { type: String, trim: true },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false, default: null },
     approvalStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],

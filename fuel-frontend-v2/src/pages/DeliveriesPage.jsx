@@ -49,10 +49,10 @@ function DeliveriesPage({ stationId }) {
 
   return (
     <div>
-      <h3>Deliveries</h3>
+      <h3>الصهاريج</h3>
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <input placeholder="بحث" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} />
-        <input placeholder="monthKey مثل 2026-03" value={filters.monthKey} onChange={(e) => setFilters((f) => ({ ...f, monthKey: e.target.value }))} />
+        <input placeholder="رمز الشهر مثل 2026-03" value={filters.monthKey} onChange={(e) => setFilters((f) => ({ ...f, monthKey: e.target.value }))} />
         {can("register_delivery") || can("manage_deliveries") ? <button onClick={createDemo}>إضافة صهريج</button> : null}
       </div>
       {loading ? <LoadingState /> : null}

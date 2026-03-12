@@ -12,6 +12,7 @@ const router = express.Router();
 
 router.post("/open", openOperationalDayHandler);
 router.post("/:id/close", closeOperationalDayHandler);
+router.get("/current", listOperationalDaysHandler);
 router.get("/", listOperationalDaysHandler);
 router.get("/:id", getOperationalDayByIdHandler);
 router.put("/:id", updateOperationalDayHandler);

@@ -11,14 +11,14 @@ import DistributionVehiclePage from "./DistributionVehiclePage";
 import ReportsPage from "./ReportsPage";
 
 const TABS = [
-  { key: "dashboard", label: "Dashboard", permission: "view_dashboard" },
-  { key: "operational-day", label: "Operational Day", permission: "view_dashboard" },
-  { key: "pump-assignments", label: "Pump Assignments", permission: "open_pump_assignment" },
-  { key: "worker-closing", label: "Worker Closing", permission: "submit_own_closing" },
-  { key: "deliveries", label: "Deliveries", permission: "register_delivery" },
-  { key: "tanks", label: "Storage Tanks", permission: "manage_tanks" },
-  { key: "distribution", label: "Distribution Vehicle", permission: "manage_distribution_vehicles" },
-  { key: "reports", label: "Reports", permission: "view_reports" }
+  { key: "dashboard", label: "الرئيسية", permission: "view_dashboard" },
+  { key: "operational-day", label: "اليوم التشغيلي", permission: "view_dashboard" },
+  { key: "pump-assignments", label: "استلامات المضخات", permission: "open_pump_assignment" },
+  { key: "worker-closing", label: "إغلاق العامل", permission: "submit_own_closing" },
+  { key: "deliveries", label: "الصهاريج", permission: "register_delivery" },
+  { key: "tanks", label: "الخزانات", permission: "manage_tanks" },
+  { key: "distribution", label: "سيارة التوزيع", permission: "manage_distribution_vehicles" },
+  { key: "reports", label: "التقارير", permission: "view_reports" }
 ];
 
 function Dashboard() {
@@ -45,13 +45,22 @@ function Dashboard() {
         if (first) {
           setStationId(first);
           localStorage.setItem("stationId", first);
+        } else {
+          setSummary({ loading: false, error: "لا توجد محطات متاحة", data: null });
         }
       })
-      .catch(() => setStations([]));
+      .catch((error) => {
+        setStations([]);
+        setSummary({ loading: false, error: error.message || "تعذر تحميل المحطات", data: null });
+      });
   }, []);
 
   useEffect(() => {
-    if (!stationId) return;
+    if (!stationId) {
+      setSummary((s) => ({ ...s, loading: false }));
+      return;
+    }
+
     setSummary({ loading: true, error: "", data: null });
     Promise.allSettled([
       reportsApi.daily(stationId, new Date().toISOString().slice(0, 10)),
@@ -66,7 +75,7 @@ function Dashboard() {
       const data = results.map((r) => (r.status === "fulfilled" ? r.value : null));
       setSummary({
         loading: false,
-        error: errors.length ? "بعض مؤشرات Dashboard غير متاحة حاليًا (TODO backend)." : "",
+        error: errors.length ? "بعض مؤشرات لوحة التحكم غير متاحة حاليًا." : "",
         data
       });
     });
@@ -74,6 +83,7 @@ function Dashboard() {
 
   const renderHome = () => {
     if (summary.loading) return <LoadingState />;
+    if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
     if (!summary.data) return <EmptyState text="لا توجد بيانات للعرض" />;
     const [daily, tanks, deliveries, pending, weekly, monthly, vehicleSales] = summary.data;
 
@@ -83,12 +93,12 @@ function Dashboard() {
         <div style={grid}>
           <Card title="مبيعات اليوم" value={daily?.totals?.totalAmount ?? "--"} />
           <Card title="الفروقات المالية" value={daily?.totals?.totalVariance ?? "--"} />
-          <Card title="حالة الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
+          <Card title="عدد الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
           <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
           <Card title="الحسابات المعلقة" value={Array.isArray(pending) ? pending.length : pending?.items?.length ?? "--"} />
-          <Card title="مبيعات سيارة التوزيع" value={vehicleSales?.totals?.totalAmount ?? "TODO"} />
-          <Card title="مقارنة أسبوعية" value={weekly?.comparisons ? "متاح" : "TODO"} />
-          <Card title="مقارنة شهرية" value={monthly?.comparisons ? "متاح" : "TODO"} />
+          <Card title="مبيعات سيارة التوزيع" value={vehicleSales?.totals?.totalAmount ?? "--"} />
+          <Card title="مقارنة أسبوعية" value={weekly?.comparisons ? "متاح" : "غير متاح"} />
+          <Card title="مقارنة شهرية" value={monthly?.comparisons ? "متاح" : "غير متاح"} />
         </div>
       </div>
     );
@@ -101,6 +111,7 @@ function Dashboard() {
         <p>{userName}</p>
         <p>{role}</p>
         <select value={stationId} onChange={(e) => setStationId(e.target.value)} style={select}>
+          <option value="">اختر محطة</option>
           {stations.map((s) => (
             <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>
           ))}
@@ -111,14 +122,15 @@ function Dashboard() {
         <button style={logoutBtn} onClick={logout}>تسجيل الخروج</button>
       </aside>
       <main style={{ flex: 1, padding: 20 }}>
-        {tab === "dashboard" && renderHome()}
-        {tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
-        {tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
-        {tab === "worker-closing" && <WorkerClosingPage stationId={stationId} />}
-        {tab === "deliveries" && <DeliveriesPage stationId={stationId} />}
-        {tab === "tanks" && <StorageTanksPage stationId={stationId} />}
-        {tab === "distribution" && <DistributionVehiclePage stationId={stationId} />}
-        {tab === "reports" && <ReportsPage stationId={stationId} />}
+        {!stationId ? <EmptyState text="يرجى اختيار محطة للبدء" /> : null}
+        {stationId && tab === "dashboard" && renderHome()}
+        {stationId && tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
+        {stationId && tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
+        {stationId && tab === "worker-closing" && <WorkerClosingPage stationId={stationId} />}
+        {stationId && tab === "deliveries" && <DeliveriesPage stationId={stationId} />}
+        {stationId && tab === "tanks" && <StorageTanksPage stationId={stationId} />}
+        {stationId && tab === "distribution" && <DistributionVehiclePage stationId={stationId} />}
+        {stationId && tab === "reports" && <ReportsPage stationId={stationId} />}
       </main>
     </div>
   );

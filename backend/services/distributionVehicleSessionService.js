@@ -2,6 +2,12 @@ import DistributionVehicleSession from "../models/DistributionVehicleSession.js"
 import { auditLogService } from "./auditLogService.js";
 
 export const distributionVehicleSessionService = {
+
+  async list(stationId) {
+    const filters = { isDeleted: false };
+    if (stationId) filters.stationId = stationId;
+    return DistributionVehicleSession.find(filters).sort({ createdAt: -1 });
+  },
   async openSession(payload, actor) {
     const session = await DistributionVehicleSession.create({ ...payload, status: "open" });
 

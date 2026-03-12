@@ -49,7 +49,7 @@ function Login() {
   return (
     <div style={wrapper}>
       <div style={card}>
-        <h1 style={{ marginTop: 0 }}>Fuel Station System</h1>
+        <h1 style={{ marginTop: 0 }}>نظام إدارة محطة الوقود</h1>
         <p style={{ color: "#6b7280" }}>تسجيل الدخول إلى النظام</p>
 
         <form onSubmit={handleSubmit}>

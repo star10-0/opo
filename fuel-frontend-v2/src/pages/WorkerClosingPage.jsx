@@ -32,7 +32,7 @@ function WorkerClosingPage({ stationId }) {
   if (state.loading) return <LoadingState />;
   return (
     <div>
-      <h3>Worker Closing</h3>
+      <h3>إغلاقات العمال</h3>
       {state.error ? <ErrorState error={state.error} /> : null}
       <SuccessState message={state.success} />
       {state.items.length === 0 ? <EmptyState text="لا توجد حسابات" /> : state.items.map((w) => {

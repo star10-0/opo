@@ -43,7 +43,7 @@ function PumpAssignmentsPage({ stationId }) {
   if (state.loading) return <LoadingState />;
   return (
     <div>
-      <h3>Pump Assignments</h3>
+      <h3>استلامات المضخات</h3>
       {state.error ? <ErrorState error={state.error} /> : null}
       <SuccessState message={state.success} />
       {state.items.length === 0 ? <EmptyState text="لا توجد استلامات مضخات" /> : (

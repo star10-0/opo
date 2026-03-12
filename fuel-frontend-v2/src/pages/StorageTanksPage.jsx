@@ -20,7 +20,7 @@ function StorageTanksPage({ stationId }) {
 
   return (
     <div>
-      <h3>Storage Tanks</h3>
+      <h3>الخزانات</h3>
       <table style={{ width: "100%" }}><thead><tr><th>الخزان</th><th>المادة</th><th>السعة</th><th>الكمية الحالية</th><th>حد التنبيه</th><th>الحالة</th></tr></thead><tbody>
         {state.rows.map((t) => (
           <tr key={t._id}><td>{t.tankName}</td><td>{t.fuelType}</td><td>{t.capacityLiters}</td><td>{t.currentQuantityLiters}</td><td>{t.lowLevelThreshold}</td><td>{t.status}</td></tr>
