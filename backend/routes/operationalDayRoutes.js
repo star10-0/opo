@@ -1,4 +1,5 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   openOperationalDayHandler,
   closeOperationalDayHandler,
@@ -10,12 +11,12 @@ import {
 
 const router = express.Router();
 
-router.post("/open", openOperationalDayHandler);
-router.post("/:id/close", closeOperationalDayHandler);
-router.get("/current", listOperationalDaysHandler);
-router.get("/", listOperationalDaysHandler);
-router.get("/:id", getOperationalDayByIdHandler);
-router.put("/:id", updateOperationalDayHandler);
-router.delete("/:id", deleteOperationalDayHandler);
+router.get("/current", requireAuthIfEnabled, listOperationalDaysHandler);
+router.get("/", requireAuthIfEnabled, listOperationalDaysHandler);
+router.get("/:id", requireAuthIfEnabled, getOperationalDayByIdHandler);
+router.post("/open", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "worker"]), openOperationalDayHandler);
+router.post("/:id/close", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "accountant"]), closeOperationalDayHandler);
+router.put("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), updateOperationalDayHandler);
+router.delete("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), deleteOperationalDayHandler);
 
 export default router;

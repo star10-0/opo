@@ -1,19 +1,20 @@
 import express from "express";
 import StorageTank from "../models/StorageTank.js";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 
 const router = express.Router();
 
-router.post("/", async (req, res) => {
+router.post("/", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
     const tank = new StorageTank(req.body);
     await tank.save();
-    res.status(201).json(tank);
+    res.status(201).json({ success: true, data: tank });
   } catch (err) {
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.get("/", async (req, res) => {
+router.get("/", requireAuthIfEnabled, async (req, res) => {
   try {
     const filter = { isDeleted: false };
 
@@ -22,13 +23,13 @@ router.get("/", async (req, res) => {
     }
 
     const tanks = await StorageTank.find(filter).sort({ createdAt: -1 });
-    res.json(tanks);
+    res.json({ success: true, data: tanks });
   } catch (err) {
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "accountant"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
@@ -37,16 +38,16 @@ router.put("/:id", async (req, res) => {
     );
 
     if (!tank) {
-      return res.status(404).json("Tank not found");
+      return res.status(404).json({ success: false, message: "Tank not found" });
     }
 
-    res.json(tank);
+    res.json({ success: true, data: tank });
   } catch (err) {
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
@@ -59,12 +60,12 @@ router.delete("/:id", async (req, res) => {
     );
 
     if (!tank) {
-      return res.status(404).json("Tank not found");
+      return res.status(404).json({ success: false, message: "Tank not found" });
     }
 
-    res.json({ message: "Tank deleted" });
+    res.json({ success: true, message: "Tank deleted" });
   } catch (err) {
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

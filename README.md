@@ -82,3 +82,43 @@ npm run healthcheck
 - Shift القديم يجب أن يتحول إلى OperationalDay + PumpAssignment + WorkerClosing
 - Tank القديم يجب أن ينقسم إلى StorageTank + TankDelivery
 - Sale القديم يجب أن يتحول إلى SalesLedger ناتج من القراءات وفترات الأسعار
+
+
+## ترتيب التشغيل الموصى به
+1. شغّل backend أولًا وتأكد من نجاح `/api/health`.
+2. بعد ذلك شغّل frontend.
+3. افتح الواجهة وسجّل الدخول ثم اختر المحطة.
+
+## متغيرات البيئة المطلوبة
+راجع `.env.example`، وأهم المتغيرات:
+- Backend: `PORT`, `NODE_ENV`, `MONGO_URI`, `JWT_SECRET`, `FRONTEND_URL`, `ENFORCE_AUTH`
+- Frontend: `VITE_API_BASE_URL`, `VITE_API_TIMEOUT_MS`
+
+## تشغيل الإنتاج (مرجعي)
+### Backend
+```bash
+cd backend
+npm install
+NODE_ENV=production ENFORCE_AUTH=true npm run start:prod
+```
+
+### Frontend
+```bash
+cd fuel-frontend-v2
+npm install
+npm run build
+npm run preview:host
+```
+
+## التحقق بعد النشر
+1. فحص صحة الخادم:
+```bash
+cd backend
+npm run healthcheck
+```
+2. اختبار تسجيل الدخول وصلاحيات الأدوار الأساسية.
+3. التحقق من تحميل لوحة التحكم والتقارير بدون أخطاء صامتة.
+
+## النسخ الاحتياطي
+تمت إضافة دليل النسخ الاحتياطي والاستعادة هنا:
+- `docs/backup-and-restore.md`
