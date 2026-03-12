@@ -13,6 +13,14 @@ import reportRoutes from "./routes/reportRoutes.js";
 import shiftRoutes from "./routes/shiftRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import gpsRoutes from "./routes/gpsRoutes.js";
+import workerClosingRoutes from "./routes/workerClosingRoutes.js";
+import shiftExpenseRoutes from "./routes/shiftExpenseRoutes.js";
+import distributionVehicleRoutes from "./routes/distributionVehicleRoutes.js";
+import distributionVehicleSessionRoutes from "./routes/distributionVehicleSessionRoutes.js";
+import salesLedgerRoutes from "./routes/salesLedgerRoutes.js";
+import reconciliationRoutes from "./routes/reconciliationRoutes.js";
+import approvalRequestRoutes from "./routes/approvalRequestRoutes.js";
+import auditLogRoutes from "./routes/auditLogRoutes.js";
 
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -39,6 +47,14 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/gps", gpsRoutes);
+app.use("/api/worker-closings", workerClosingRoutes);
+app.use("/api/expenses", shiftExpenseRoutes);
+app.use("/api/distribution-vehicles", distributionVehicleRoutes);
+app.use("/api/distribution-vehicle-sessions", distributionVehicleSessionRoutes);
+app.use("/api/sales-ledger", salesLedgerRoutes);
+app.use("/api/reconciliation", reconciliationRoutes);
+app.use("/api/approval-requests", approvalRequestRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
 
 app.use(errorHandler);
 

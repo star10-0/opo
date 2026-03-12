@@ -132,3 +132,14 @@
 ### GET /api/reports/daily?stationId=&date=
 ### GET /api/reports/weekly?stationId=&from=&to=
 ### GET /api/reports/monthly?stationId=&monthKey=
+
+## Sales Ledger
+### GET /api/sales-ledger?operationalDayId=
+- الهدف: جلب قيود دفتر المبيعات المحسوبة
+
+### POST /api/sales-ledger/generate
+- الهدف: توليد قيود دفتر المبيعات من القراءات وفترات الأسعار فقط
+
+## Audit Logs
+### GET /api/audit-logs?stationId=
+- الهدف: جلب سجلات العمليات الحساسة
