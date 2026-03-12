@@ -1,9 +1,13 @@
-export function LoadingState({ text = "جارٍ التحميل..." }) {
-  return <p style={{ color: "#475569" }}>{text}</p>;
+import { useLanguage } from "../i18n/LanguageContext";
+
+export function LoadingState({ text }) {
+  const { t } = useLanguage();
+  return <p style={{ color: "#475569" }}>{text || t("loading")}</p>;
 }
 
-export function EmptyState({ text = "لا توجد بيانات" }) {
-  return <p style={{ color: "#64748b", background: "#f8fafc", padding: 12, borderRadius: 8 }}>{text}</p>;
+export function EmptyState({ text }) {
+  const { t } = useLanguage();
+  return <p style={{ color: "#64748b", background: "#f8fafc", padding: 12, borderRadius: 8 }}>{text || t("noData")}</p>;
 }
 
 export function ErrorState({ error }) {

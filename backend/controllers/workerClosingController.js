@@ -29,6 +29,7 @@ export async function listWorkerClosings(req, res, next) {
     const data = await workerClosingService.list({
       stationId: req.query.stationId,
       operationalDayId: req.query.operationalDayId,
+      status: req.query.status,
     });
     res.json({ success: true, data });
   } catch (error) {
