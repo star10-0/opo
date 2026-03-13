@@ -31,6 +31,7 @@
 - docs/api-contract.md
 - docs/workflows.md
 - docs/roles-and-permissions.md
+- docs/phase-12-post-launch-backlog.md
 
 ## إعداد البيئة
 انسخ `.env.example` إلى `.env` ثم حدّث القيم المناسبة.
