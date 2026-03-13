@@ -31,6 +31,10 @@
 - docs/api-contract.md
 - docs/workflows.md
 - docs/roles-and-permissions.md
+- docs/user-guide.md
+- docs/operational-guide.md
+- docs/troubleshooting.md
+- docs/final-handoff-notes.md
 
 ## إعداد البيئة
 انسخ `.env.example` إلى `.env` ثم حدّث القيم المناسبة.
@@ -125,3 +129,9 @@ npm run healthcheck
 
 ## التسليم والتشغيل الإنتاجي
 - راجع `docs/deployment-handoff.md` لخطوات النشر والفحص النهائي.
+
+## حزمة التسليم للمستخدم النهائي (Phase 11)
+- دليل المستخدم حسب الدور: `docs/user-guide.md`
+- دليل التشغيل الداخلي: `docs/operational-guide.md`
+- دليل المشاكل الشائعة: `docs/troubleshooting.md`
+- ملاحظات التسليم النهائية: `docs/final-handoff-notes.md`

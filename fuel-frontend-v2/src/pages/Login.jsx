@@ -47,6 +47,9 @@ function Login() {
           </select>
         </div>
         <p style={{ color: "#6b7280" }}>{t("loginSubtitle")}</p>
+        <div style={hintBox}>
+          <strong>إرشاد سريع:</strong> سجّل الدخول ثم اختر المحطة من لوحة التحكم قبل بدء أي عملية يومية.
+        </div>
 
         <form onSubmit={handleSubmit}>
           <input type="email" name="email" placeholder={t("email")} value={form.email} onChange={handleChange} style={input} required />
@@ -73,5 +76,6 @@ const input = { width: "100%", padding: "12px", marginBottom: "12px", border: "1
 const primaryBtn = { width: "100%", padding: "12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer" };
 const secondaryBtn = { padding: "10px 14px", background: "#e5e7eb", color: "#111827", border: "none", borderRadius: "10px", cursor: "pointer" };
 const errorBox = { background: "#fee2e2", color: "#991b1b", padding: "10px", borderRadius: "10px", marginBottom: "12px" };
+const hintBox = { background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e3a8a", padding: "10px", borderRadius: "10px", marginBottom: "12px", fontSize: 14 };
 
 export default Login;

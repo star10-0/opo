@@ -259,6 +259,7 @@ function Dashboard() {
       <div style={onboardingCard}>
         <h3 style={{ marginTop: 0 }}>اختر محطة للمتابعة</h3>
         <p>قبل البدء بالعمل، حدد المحطة الحالية من القائمة.</p>
+        <div style={guidanceBox}>إذا لم تجد المحطة المطلوبة، راجع صلاحيات الوصول للمحطات مع المدير.</div>
         <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
           <option value="">-- اختر محطة --</option>
           {stationsState.items.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
@@ -291,6 +292,7 @@ function Dashboard() {
       </aside>
       <main style={{ flex: 1, padding: 20 }}>
         {!stationId ? renderOnboarding() : null}
+        {stationId ? <div style={guidanceBox}>دليل العمل السريع: اليوم التشغيلي ← استلامات المضخات ← قراءات/توريدات ← إغلاقات العاملين ← التقارير.</div> : null}
         {stationId && tab === "dashboard" && renderHome()}
         {stationId && tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
         {stationId && tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
@@ -318,5 +320,6 @@ const sidebar = { width: 260, background: "#111827", color: "#fff", padding: 16 
 const menuBtn = { width: "100%", marginBottom: 8, padding: 10, textAlign: "start", border: "none", borderRadius: 6 };
 const logoutBtn = { width: "100%", padding: 10, marginTop: 10, background: "#dc2626", color: "#fff", border: "none", borderRadius: 6 };
 const select = { width: "100%", padding: 10, marginBottom: 10 };
+const guidanceBox = { background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: 10, marginBottom: 12, color: "#0f172a" };
 
 export default Dashboard;
