@@ -13,3 +13,5 @@ export { auditLogsApi } from "./auditLogs";
 export { notificationsApi } from "./notifications";
 
 export { pumpsApi } from "./pumps";
+
+export { automationApi } from "./automation";

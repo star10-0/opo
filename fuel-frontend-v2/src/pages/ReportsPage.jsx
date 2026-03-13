@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { reportsApi } from "../api";
+import { reportsApi, automationApi } from "../api";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
@@ -47,6 +47,8 @@ function ReportsPage({ stationId }) {
       reportsApi.distributionVehicle(normalizedQuery),
       reportsApi.deliveriesTanks(normalizedQuery),
       reportsApi.analyticsOverview(normalizedQuery),
+      reportsApi.enterpriseOversight({ ...normalizedQuery, daysBack: 7 }),
+      automationApi.integrationCatalog(),
     ]);
 
     setState({
@@ -61,6 +63,8 @@ function ReportsPage({ stationId }) {
         vehicle: requests[4].status === "fulfilled" ? requests[4].value : null,
         deliveriesTanks: requests[5].status === "fulfilled" ? requests[5].value : null,
         analytics: requests[6].status === "fulfilled" ? requests[6].value : null,
+        enterprise: requests[7].status === "fulfilled" ? requests[7].value : null,
+        integrationCatalog: requests[8].status === "fulfilled" ? requests[8].value : null,
       },
     });
   };
@@ -99,7 +103,7 @@ function ReportsPage({ stationId }) {
   };
 
   if (state.loading) return <LoadingState />;
-  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks, analytics } = state.data;
+  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks, analytics, enterprise, integrationCatalog } = state.data;
 
   return (
     <div>
@@ -136,6 +140,20 @@ function ReportsPage({ stationId }) {
         <section style={card}>
           <strong>مؤشرات تحليلية متقدمة</strong>
           <pre style={pre}>{JSON.stringify({ kpis: analytics.kpis, stationsScope: analytics.stationsScope, topVarianceRows: analytics.topVarianceRows }, null, 2)}</pre>
+        </section>
+      ) : null}
+
+      {enterprise ? (
+        <section style={card}>
+          <strong>جاهزية الإدارة المركزية</strong>
+          <pre style={pre}>{JSON.stringify({ summary: enterprise.summary, topStations: enterprise.stations?.slice(0, 3) }, null, 2)}</pre>
+        </section>
+      ) : null}
+
+      {integrationCatalog ? (
+        <section style={card}>
+          <strong>جاهزية التكاملات المؤسسية</strong>
+          <pre style={pre}>{JSON.stringify(integrationCatalog, null, 2)}</pre>
         </section>
       ) : null}
 

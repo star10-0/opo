@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi, approvalsApi } from "../api";
+import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi, approvalsApi, automationApi } from "../api";
 import { can, canAny } from "../lib/permissions";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -149,6 +149,8 @@ function Dashboard() {
       reportsApi.distributionVehicle({ ...sharedQuery, from: weekStart, to: today }),
       reportsApi.deliveriesTanks({ ...sharedQuery, monthKey }),
       reportsApi.analyticsOverview({ ...sharedQuery, from: weekStart, to: today }),
+      reportsApi.enterpriseOversight({ ...sharedQuery, daysBack: 7 }),
+      automationApi.preview({ ...sharedQuery, daysBack: 7 }),
       stationId === "__all__" ? Promise.resolve([]) : storageTanksApi.list(stationId),
       stationId === "__all__" ? Promise.resolve([]) : deliveriesApi.list({ stationId, limit: 5 }),
       stationId === "__all__" ? Promise.resolve([]) : workerClosingsApi.list({ stationId, status: "suspended" }),
@@ -173,7 +175,7 @@ function Dashboard() {
     if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
     if (!summary.data) return <EmptyState text={t("noData")} />;
 
-    const [daily, weekly, monthly, variances, vehicle, tankDelivery, analytics, tanks, deliveries, suspended, approvals] = summary.data;
+    const [daily, weekly, monthly, variances, vehicle, tankDelivery, analytics, enterprise, automationPreview, tanks, deliveries, suspended, approvals] = summary.data;
     return (
       <div>
         <section style={onboardingCard}>
@@ -199,8 +201,27 @@ function Dashboard() {
           <Card title="إغلاقات معلقة/موقوفة" value={Array.isArray(suspended) ? suspended.length : suspended?.items?.length ?? "--"} />
           <Card title="عدد الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
           <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
+          <Card title="محطات عالية المخاطر" value={enterprise?.summary?.highRiskStations ?? "--"} />
+          <Card title="تنبيهات جاهزة للأتمتة" value={automationPreview?.reminderQueue?.length ?? "--"} />
         </div>
-      </div>
+
+        {enterprise?.stations?.length ? (
+          <section style={{ ...card, marginTop: 12 }}>
+            <strong>أولوية المتابعة المركزية (متعدد المحطات)</strong>
+            <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>ترتيب المحطات حسب درجة المخاطر التشغيلية.</small>
+            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+              {enterprise.stations.slice(0, 3).map((row) => (
+                <div key={`risk-${row.stationId}`} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 10 }}>
+                  <strong>{row.stationId}</strong> — مستوى الخطر: {row.riskBand === "high" ? "عالٍ" : row.riskBand === "medium" ? "متوسط" : "منخفض"} ({row.riskScore})
+                  <div style={{ color: "#475569", marginTop: 4 }}>
+                    موافقات معلقة: {row.pendingApprovals} | خزانات منخفضة: {row.lowTanks} | إغلاقات معلقة: {row.submittedClosings}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        </div>
     );
   };
 
