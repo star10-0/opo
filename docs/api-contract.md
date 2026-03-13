@@ -151,3 +151,21 @@
 ## Audit Logs
 ### GET /api/audit-logs?stationId=
 - الهدف: جلب سجلات العمليات الحساسة
+
+
+## Enterprise Reports
+### GET /api/reports/enterprise/oversight?stationId=&stationIds=&daysBack=
+- الهدف: عرض ملخص مركزي متعدد المحطات مع درجة مخاطر تشغيلية لكل محطة
+
+## Automation
+### GET /api/automation/preview?stationId=&stationIds=&daysBack=
+- الهدف: معاينة التنبيهات التلقائية المقترحة دون تنفيذ
+
+### POST /api/automation/run-manual
+- الهدف: تشغيل يدوي آمن (dry-run افتراضيًا) لتجهيز إرسال التنبيهات عبر قنوات مدعومة
+
+### GET /api/automation/pending-review-reminders?stationId=
+- الهدف: تذكير بالمراجعات المعلقة (موافقات + إغلاقات مرسلة)
+
+### GET /api/automation/integration-catalog
+- الهدف: عرض جاهزية قنوات التكامل (email/sms/gps/accounting/spreadsheet)

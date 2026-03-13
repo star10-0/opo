@@ -27,6 +27,7 @@ import reportRoutes from "./routes/reportRoutes.js";
 import stationRoutes from "./routes/stationRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import automationRoutes from "./routes/automationRoutes.js";
 
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
@@ -99,6 +100,7 @@ app.use("/api/approval-requests", approvalRequestRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/automation", automationRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
