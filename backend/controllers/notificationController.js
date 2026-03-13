@@ -10,6 +10,9 @@ export async function listNotifications(req, res, next) {
       stationId: req.query.stationId,
       role: req.query.role || "worker",
       limit: req.query.limit,
+      types: req.query.types,
+      priorities: req.query.priorities,
+      q: req.query.q,
     });
     res.json({ success: true, data });
   } catch (error) {

@@ -68,6 +68,8 @@ function Dashboard() {
   const [stationsState, setStationsState] = useState({ loading: true, error: "", items: [], totalStations: 0 });
   const [stationId, setStationId] = useState(localStorage.getItem("stationId") || "");
   const [summary, setSummary] = useState({ loading: true, error: "", data: null });
+
+  const selectedStation = useMemo(() => stationsState.items.find((s) => s._id === stationId) || null, [stationsState.items, stationId]);
   const [createState, setCreateState] = useState({
     loading: false,
     error: "",
@@ -136,23 +138,27 @@ function Dashboard() {
     }
 
     setSummary({ loading: true, error: "", data: null });
+    const stationScope = stationId === "__all__" ? stationsState.items.map((s) => s._id) : [stationId];
+    const sharedQuery = stationId === "__all__" ? { stationIds: stationScope.join(",") } : { stationId };
+
     Promise.allSettled([
-      reportsApi.daily({ stationId, date: today }),
-      reportsApi.weekly({ stationId, from: weekStart, to: today }),
-      reportsApi.monthly({ stationId, monthKey }),
-      reportsApi.variances({ stationId, from: weekStart, to: today }),
-      reportsApi.distributionVehicle({ stationId, from: weekStart, to: today }),
-      reportsApi.deliveriesTanks({ stationId, monthKey }),
-      storageTanksApi.list(stationId),
-      deliveriesApi.list({ stationId, limit: 5 }),
-      workerClosingsApi.list({ stationId, status: "suspended" }),
-      approvalsApi.list({ stationId, finalStatus: "pending" }),
+      reportsApi.daily({ ...sharedQuery, date: today }),
+      reportsApi.weekly({ ...sharedQuery, from: weekStart, to: today }),
+      reportsApi.monthly({ ...sharedQuery, monthKey }),
+      reportsApi.variances({ ...sharedQuery, from: weekStart, to: today }),
+      reportsApi.distributionVehicle({ ...sharedQuery, from: weekStart, to: today }),
+      reportsApi.deliveriesTanks({ ...sharedQuery, monthKey }),
+      reportsApi.analyticsOverview({ ...sharedQuery, from: weekStart, to: today }),
+      stationId === "__all__" ? Promise.resolve([]) : storageTanksApi.list(stationId),
+      stationId === "__all__" ? Promise.resolve([]) : deliveriesApi.list({ stationId, limit: 5 }),
+      stationId === "__all__" ? Promise.resolve([]) : workerClosingsApi.list({ stationId, status: "suspended" }),
+      stationId === "__all__" ? Promise.resolve([]) : approvalsApi.list({ stationId, finalStatus: "pending" }),
     ]).then((results) => {
       const errors = results.filter((r) => r.status === "rejected");
       const data = results.map((r) => (r.status === "fulfilled" ? r.value : null));
       setSummary({ loading: false, error: errors.length ? "بعض مؤشرات لوحة التحكم غير متاحة حاليًا." : "", data });
     });
-  }, [stationId]);
+  }, [stationId, stationsState.items]);
 
   const roleHint = useMemo(() => {
     if (role === "worker") return "ابدأ من استلامات المضخات ثم أرسل إغلاقك للمحاسب.";
@@ -167,11 +173,12 @@ function Dashboard() {
     if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
     if (!summary.data) return <EmptyState text={t("noData")} />;
 
-    const [daily, weekly, monthly, variances, vehicle, tankDelivery, tanks, deliveries, suspended, approvals] = summary.data;
+    const [daily, weekly, monthly, variances, vehicle, tankDelivery, analytics, tanks, deliveries, suspended, approvals] = summary.data;
     return (
       <div>
         <section style={onboardingCard}>
           <h3 style={{ margin: "0 0 8px" }}>خطوة اليوم المقترحة</h3>
+          <small style={{ color: "#64748b" }}>النطاق الحالي: {stationId === "__all__" ? "كل المحطات المتاحة" : (selectedStation?.name || selectedStation?.code || stationId)}</small>
           <p style={{ margin: 0, color: "#475569" }}>{roleHint}</p>
           <ul style={{ margin: "10px 0 0", color: "#334155", paddingInlineStart: 20 }}>
             {quickSteps.map((step) => <li key={step}>{step}</li>)}
@@ -186,6 +193,9 @@ function Dashboard() {
           <Card title="سيارات التوزيع" value={vehicle?.totals?.totalAmount ?? "--"} />
           <Card title="ملخص الفروقات" value={variances?.totals?.totalVariance ?? "--"} />
           <Card title="موافقات معلقة" value={Array.isArray(approvals) ? approvals.length : approvals?.items?.length ?? "--"} />
+          <Card title="مبيعات/إغلاق (متوسط)" value={analytics?.kpis?.avgAmountPerClosing ?? "--"} />
+          <Card title="% تغير المبيعات" value={analytics?.kpis?.salesChangePct ?? "--"} />
+          <Card title="% معدل الفروقات" value={analytics?.kpis?.varianceRatePct ?? "--"} />
           <Card title="إغلاقات معلقة/موقوفة" value={Array.isArray(suspended) ? suspended.length : suspended?.items?.length ?? "--"} />
           <Card title="عدد الخزانات" value={Array.isArray(tanks) ? tanks.length : "--"} />
           <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
@@ -330,8 +340,9 @@ function Dashboard() {
           <option value="en">{t("english")}</option>
         </select>
 
-        <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
+        <select value={stationId} onChange={(e) => { setStationId(e.target.value); if (e.target.value === "__all__") { localStorage.removeItem("stationId"); } else { localStorage.setItem("stationId", e.target.value); } }} style={select}>
           <option value="">{t("selectStation")}</option>
+          {stationsState.items.length > 1 ? <option value="__all__">كل المحطات (مقارنة)</option> : null}
           {stationsState.items.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
         </select>
 
@@ -343,15 +354,18 @@ function Dashboard() {
       <main className="dashboard-main" style={{ flex: 1, padding: 20 }}>
         {!stationId ? renderOnboarding() : null}
         {stationId && tab === "dashboard" && renderHome()}
-        {stationId && tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
-        {stationId && tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
-        {stationId && tab === "worker-closing" && <WorkerClosingPage stationId={stationId} />}
-        {stationId && tab === "deliveries" && <DeliveriesPage stationId={stationId} />}
-        {stationId && tab === "tanks" && <StorageTanksPage stationId={stationId} />}
-        {stationId && tab === "distribution" && <DistributionVehiclePage stationId={stationId} />}
+        {stationId === "__all__" && !["dashboard", "reports", "notifications"].includes(tab) ? (
+          <EmptyState text="هذا العرض متاح فقط عند اختيار محطة محددة. اختر محطة واحدة لإدارة العمليات اليومية." />
+        ) : null}
+        {stationId && stationId !== "__all__" && tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "worker-closing" && <WorkerClosingPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "deliveries" && <DeliveriesPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "tanks" && <StorageTanksPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "distribution" && <DistributionVehiclePage stationId={stationId} />}
         {stationId && tab === "reports" && <ReportsPage stationId={stationId} />}
-        {stationId && tab === "approvals" && <ApprovalsPage stationId={stationId} />}
-        {stationId && tab === "audit" && <AuditLogPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "approvals" && <ApprovalsPage stationId={stationId} />}
+        {stationId && stationId !== "__all__" && tab === "audit" && <AuditLogPage stationId={stationId} />}
         {stationId && tab === "notifications" && <NotificationsPage stationId={stationId} />}
       </main>
     </div>
