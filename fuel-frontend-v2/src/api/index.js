@@ -11,3 +11,5 @@ export { reportsApi } from "./reports";
 export { approvalsApi } from "./approvals";
 export { auditLogsApi } from "./auditLogs";
 export { notificationsApi } from "./notifications";
+
+export { pumpsApi } from "./pumps";

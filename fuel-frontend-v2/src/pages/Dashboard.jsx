@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { stationApi, reportsApi, storageTanksApi, deliveriesApi, workerClosingsApi, approvalsApi } from "../api";
 import { can, canAny } from "../lib/permissions";
-import { EmptyState, ErrorState, LoadingState } from "../components/Feedback";
+import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 import { useLanguage } from "../i18n/LanguageContext";
 import OperationalDayPage from "./OperationalDayPage";
 import PumpAssignmentsPage from "./PumpAssignmentsPage";
@@ -38,9 +38,26 @@ function Dashboard() {
 
   const visibleTabs = useMemo(() => tabs.filter((x) => x.visible || role === "admin"), [tabs, role]);
   const [tab, setTab] = useState("dashboard");
-  const [stations, setStations] = useState([]);
+  const [stationsState, setStationsState] = useState({ loading: true, error: "", items: [], totalStations: 0 });
   const [stationId, setStationId] = useState(localStorage.getItem("stationId") || "");
   const [summary, setSummary] = useState({ loading: true, error: "", data: null });
+  const [createState, setCreateState] = useState({
+    loading: false,
+    error: "",
+    success: "",
+    form: {
+      name: "",
+      code: "",
+      address: "",
+      phone: "",
+      withBootstrapData: true,
+      fuelType: "diesel",
+      tanksCount: 1,
+      pumpsCount: 1,
+    }
+  });
+
+  const canCreateStation = canAny(["manage_stations", "view_all_stations"]) || ["admin", "manager"].includes(role);
 
   useEffect(() => {
     if (!visibleTabs.some((x) => x.key === tab)) {
@@ -53,26 +70,41 @@ function Dashboard() {
     window.location.href = "/";
   };
 
-  useEffect(() => {
-    stationApi.list().then((data) => {
+  const loadStations = async () => {
+    setStationsState({ loading: true, error: "", items: [], totalStations: 0 });
+    try {
+      const data = await stationApi.allowed();
       const list = Array.isArray(data) ? data : data?.items || [];
-      setStations(list);
-      const first = stationId || list[0]?._id;
-      if (first) {
-        setStationId(first);
-        localStorage.setItem("stationId", first);
-      } else {
-        setSummary({ loading: false, error: "لا توجد محطات متاحة", data: null });
+      const totalStations = data?.meta?.totalStations ?? list.length;
+
+      setStationsState({ loading: false, error: "", items: list, totalStations });
+
+      const stored = localStorage.getItem("stationId") || "";
+      const hasStored = stored && list.some((s) => s._id === stored);
+      if (hasStored) {
+        setStationId(stored);
+        return;
       }
-    }).catch((error) => {
-      setStations([]);
-      setSummary({ loading: false, error: error.message || "تعذر تحميل المحطات", data: null });
-    });
+
+      if (list.length === 1) {
+        setStationId(list[0]._id);
+        localStorage.setItem("stationId", list[0]._id);
+      } else {
+        setStationId("");
+        localStorage.removeItem("stationId");
+      }
+    } catch (error) {
+      setStationsState({ loading: false, error: error.message || "تعذر تحميل المحطات", items: [], totalStations: 0 });
+    }
+  };
+
+  useEffect(() => {
+    loadStations();
   }, []);
 
   useEffect(() => {
     if (!stationId) {
-      setSummary((s) => ({ ...s, loading: false }));
+      setSummary({ loading: false, error: "", data: null });
       return;
     }
 
@@ -120,6 +152,121 @@ function Dashboard() {
     );
   };
 
+  const buildInitialRows = (prefix, count, fuelType) => {
+    const safeCount = Math.max(0, Math.min(5, Number(count || 0)));
+    return Array.from({ length: safeCount }).map((_, index) => {
+      const number = index + 1;
+      return {
+        fuelType,
+        [`${prefix}Name`]: `${prefix === "tank" ? "خزان" : "مضخة"} ${number}`,
+        [`${prefix}Code`]: `${createState.form.code || "ST"}-${prefix === "tank" ? "T" : "P"}${String(number).padStart(2, "0")}`,
+      };
+    });
+  };
+
+  const createFirstStation = async (e) => {
+    e.preventDefault();
+    setCreateState((s) => ({ ...s, loading: true, error: "", success: "" }));
+
+    try {
+      const payload = {
+        name: createState.form.name,
+        code: createState.form.code,
+        address: createState.form.address,
+        phone: createState.form.phone,
+      };
+
+      if (createState.form.withBootstrapData) {
+        payload.initialTanks = buildInitialRows("tank", createState.form.tanksCount, createState.form.fuelType).map((row) => ({
+          tankName: row.tankName,
+          tankCode: row.tankCode,
+          fuelType: row.fuelType,
+          capacityLiters: 10000,
+          currentQuantityLiters: 0,
+          lowLevelThreshold: 1000,
+        }));
+
+        payload.initialPumps = buildInitialRows("pump", createState.form.pumpsCount, createState.form.fuelType).map((row) => ({
+          pumpName: row.pumpName,
+          pumpCode: row.pumpCode,
+          fuelType: row.fuelType,
+        }));
+      }
+
+      const result = createState.form.withBootstrapData
+        ? await stationApi.bootstrap(payload)
+        : { station: await stationApi.create(payload) };
+
+      const newStationId = result?.station?._id || result?._id;
+      if (newStationId) {
+        localStorage.setItem("stationId", newStationId);
+        setStationId(newStationId);
+      }
+
+      setCreateState((s) => ({ ...s, loading: false, success: "تم إنشاء المحطة بنجاح", error: "" }));
+      await loadStations();
+    } catch (error) {
+      setCreateState((s) => ({ ...s, loading: false, error: error.message || "فشل إنشاء المحطة", success: "" }));
+    }
+  };
+
+  const renderOnboarding = () => {
+    if (stationsState.loading) return <LoadingState text="جارٍ تحميل المحطات..." />;
+    if (stationsState.error) return <ErrorState error={stationsState.error} />;
+
+    if (stationsState.totalStations === 0) {
+      if (!canCreateStation) {
+        return <EmptyState text="لا توجد أي محطة في النظام حتى الآن، ولا تملك صلاحية إنشاء محطة. يرجى التواصل مع المدير." />;
+      }
+
+      return (
+        <div style={onboardingCard}>
+          <h3 style={{ marginTop: 0 }}>مرحبًا بك 👋</h3>
+          <p>لا توجد أي محطة بعد. ابدأ الآن بإنشاء أول محطة لتفعيل النظام.</p>
+          <form onSubmit={createFirstStation} style={{ display: "grid", gap: 8 }}>
+            <input required placeholder="اسم المحطة" value={createState.form.name} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, name: e.target.value } }))} />
+            <input required placeholder="كود المحطة (فريد)" value={createState.form.code} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, code: e.target.value.trim().toUpperCase() } }))} />
+            <input placeholder="العنوان (اختياري)" value={createState.form.address} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, address: e.target.value } }))} />
+            <input placeholder="الهاتف (اختياري)" value={createState.form.phone} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, phone: e.target.value } }))} />
+            <label style={{ display: "flex", gap: 8 }}>
+              <input type="checkbox" checked={createState.form.withBootstrapData} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, withBootstrapData: e.target.checked } }))} />
+              إنشاء بيانات بدء مبدئية (خزانات ومضخات)
+            </label>
+            {createState.form.withBootstrapData ? (
+              <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
+                <select value={createState.form.fuelType} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, fuelType: e.target.value } }))}>
+                  <option value="diesel">ديزل</option>
+                  <option value="gasoline">بنزين</option>
+                  <option value="kerosene">كيروسين</option>
+                </select>
+                <input type="number" min="0" max="5" value={createState.form.tanksCount} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, tanksCount: e.target.value } }))} placeholder="عدد الخزانات" />
+                <input type="number" min="0" max="5" value={createState.form.pumpsCount} onChange={(e) => setCreateState((s) => ({ ...s, form: { ...s.form, pumpsCount: e.target.value } }))} placeholder="عدد المضخات" />
+              </div>
+            ) : null}
+            {createState.error ? <ErrorState error={createState.error} /> : null}
+            <SuccessState message={createState.success} />
+            <button disabled={createState.loading} type="submit">{createState.loading ? "جارٍ الإنشاء..." : "إنشاء أول محطة"}</button>
+          </form>
+        </div>
+      );
+    }
+
+    if (!stationsState.items.length) {
+      return <EmptyState text="توجد محطات في النظام لكن حسابك غير مرتبط بأي محطة (stationAccess فارغ)." />;
+    }
+
+    return (
+      <div style={onboardingCard}>
+        <h3 style={{ marginTop: 0 }}>اختر محطة للمتابعة</h3>
+        <p>قبل البدء بالعمل، حدد المحطة الحالية من القائمة.</p>
+        <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
+          <option value="">-- اختر محطة --</option>
+          {stationsState.items.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
+        </select>
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside style={sidebar}>
@@ -131,17 +278,19 @@ function Dashboard() {
           <option value="ar">{t("arabic")}</option>
           <option value="en">{t("english")}</option>
         </select>
+
         <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
           <option value="">{t("selectStation")}</option>
-          {stations.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
+          {stationsState.items.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
         </select>
+
         {visibleTabs.map((tabItem) => (
           <button key={tabItem.key} style={menuBtn} onClick={() => setTab(tabItem.key)}>{tabItem.label}</button>
         ))}
         <button style={logoutBtn} onClick={logout}>{t("logout")}</button>
       </aside>
       <main style={{ flex: 1, padding: 20 }}>
-        {!stationId ? <EmptyState text={t("chooseStationToStart")} /> : null}
+        {!stationId ? renderOnboarding() : null}
         {stationId && tab === "dashboard" && renderHome()}
         {stationId && tab === "operational-day" && <OperationalDayPage stationId={stationId} />}
         {stationId && tab === "pump-assignments" && <PumpAssignmentsPage stationId={stationId} />}
@@ -164,6 +313,7 @@ function Card({ title, value }) {
 
 const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 };
 const card = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 14 };
+const onboardingCard = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16, maxWidth: 640 };
 const sidebar = { width: 260, background: "#111827", color: "#fff", padding: 16 };
 const menuBtn = { width: "100%", marginBottom: 8, padding: 10, textAlign: "start", border: "none", borderRadius: 6 };
 const logoutBtn = { width: "100%", padding: 10, marginTop: 10, background: "#dc2626", color: "#fff", border: "none", borderRadius: 6 };
