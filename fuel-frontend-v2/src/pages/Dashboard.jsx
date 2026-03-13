@@ -28,6 +28,13 @@ const rolePrimaryFlow = {
   worker: ["pump-assignments", "worker-closing", "deliveries"],
 };
 
+const roleNextSteps = {
+  admin: ["اختيار المحطة النشطة", "مراجعة حالة اليوم التشغيلي", "متابعة الخزانات والتقارير"],
+  manager: ["اختيار المحطة النشطة", "بدء/مراجعة اليوم التشغيلي", "متابعة استلامات المضخات"],
+  accountant: ["اختيار المحطة النشطة", "مراجعة إغلاقات العاملين", "فتح التقارير ومراجعة الفروقات"],
+  worker: ["اختيار المحطة النشطة", "فتح استلام المضخة", "إرسال الإغلاق للمحاسب بعد نهاية الوردية"],
+};
+
 function Dashboard() {
   const { language, setLanguage, t } = useLanguage();
   const userName = localStorage.getItem("userName") || "مستخدم النظام";
@@ -153,6 +160,8 @@ function Dashboard() {
     return "ابدأ من اليوم التشغيلي، ثم راقب الخزانات والإغلاقات قبل التقارير.";
   }, [role]);
 
+  const quickSteps = roleNextSteps[role] || roleNextSteps.worker;
+
   const renderHome = () => {
     if (summary.loading) return <LoadingState text="جارٍ تحميل مؤشرات لوحة التحكم..." />;
     if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
@@ -164,6 +173,9 @@ function Dashboard() {
         <section style={onboardingCard}>
           <h3 style={{ margin: "0 0 8px" }}>خطوة اليوم المقترحة</h3>
           <p style={{ margin: 0, color: "#475569" }}>{roleHint}</p>
+          <ul style={{ margin: "10px 0 0", color: "#334155", paddingInlineStart: 20 }}>
+            {quickSteps.map((step) => <li key={step}>{step}</li>)}
+          </ul>
         </section>
         {summary.error ? <ErrorState error={summary.error} /> : null}
         <div style={grid}>
@@ -295,6 +307,9 @@ function Dashboard() {
       <div style={onboardingCard}>
         <h3 style={{ marginTop: 0 }}>اختر محطة للمتابعة</h3>
         <p>الخطوة التالية: اختر المحطة الحالية ثم افتح اليوم التشغيلي.</p>
+        <ul style={{ marginTop: 0, color: "#334155", paddingInlineStart: 20 }}>
+          {quickSteps.map((step) => <li key={`onboard-${step}`}>{step}</li>)}
+        </ul>
         <select value={stationId} onChange={(e) => { setStationId(e.target.value); localStorage.setItem("stationId", e.target.value); }} style={select}>
           <option value="">-- اختر محطة --</option>
           {stationsState.items.map((s) => <option key={s._id} value={s._id}>{s.name || s.code || s._id}</option>)}
