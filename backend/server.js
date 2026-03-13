@@ -6,6 +6,7 @@ import morgan from "morgan";
 import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
+import { env, validateEnv } from "./config/env.js";
 import auth from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
@@ -29,12 +30,8 @@ import deliveryRoutes from "./routes/deliveryRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
-const isProd = process.env.NODE_ENV === "production";
-const enforceAuth = process.env.ENFORCE_AUTH === "true";
-const allowedOrigins = (process.env.FRONTEND_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const { isProd, enforceAuth, port: PORT, frontendOrigins: allowedOrigins } = env;
+const envValidation = validateEnv();
 
 const corsOrigin = (origin, callback) => {
   if (!origin) return callback(null, true);
@@ -69,11 +66,15 @@ app.get("/api/health", (req, res) => {
     success: true,
     status: "ok",
     authEnforced: enforceAuth,
-    environment: process.env.NODE_ENV || "development",
+    environment: env.nodeEnv,
     uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
     allowedOrigins: allowedOrigins.length ? allowedOrigins : ["*"],
     dbConnected: dbReady,
+    configuration: {
+      ok: envValidation.ok,
+      warnings: envValidation.warnings,
+    },
   });
 });
 
@@ -103,10 +104,17 @@ app.use("/api/notifications", notificationRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const PORT = Number(process.env.PORT || 5000);
 let server;
 
 const start = async () => {
+  if (!envValidation.ok) {
+    console.error("❌ Invalid environment configuration:");
+    envValidation.errors.forEach((item) => console.error(` - ${item}`));
+    process.exit(1);
+  }
+
+  envValidation.warnings.forEach((item) => console.warn(`⚠️ ${item}`));
+
   try {
     await connectDB();
   } catch (error) {
@@ -124,16 +132,23 @@ const start = async () => {
   });
 };
 
-const shutdown = (signal) => {
+const shutdown = async (signal) => {
   console.log(`Received ${signal}, shutting down gracefully...`);
   if (!server) {
     process.exit(0);
   }
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    try {
+      await mongoose.connection.close();
+    } catch (error) {
+      console.error("Error while closing database connection:", error);
+    }
+    process.exit(0);
+  });
 };
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => { shutdown("SIGINT"); });
+process.on("SIGTERM", () => { shutdown("SIGTERM"); });
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Rejection:", reason);
 });

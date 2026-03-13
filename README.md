@@ -122,3 +122,7 @@ npm run healthcheck
 ## النسخ الاحتياطي
 تمت إضافة دليل النسخ الاحتياطي والاستعادة هنا:
 - `docs/backup-and-restore.md`
+
+## وثائق التسليم والنشر
+- `docs/deployment-readiness.md`
+- `docs/final-handoff-phase8.md`

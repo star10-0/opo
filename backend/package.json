@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "start:prod": "NODE_ENV=production node server.js",
-    "healthcheck": "node -e \"const port=process.env.PORT||5000;fetch('http://localhost:'+port+'/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(()=>process.exit(0)).catch(()=>process.exit(1))\""
+    "healthcheck": "node -e \"const port=process.env.PORT||5000;fetch('http://localhost:'+port+'/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(()=>process.exit(0)).catch(()=>process.exit(1))\"",
+    "check:env": "node -e \"import('./config/env.js').then(({validateEnv})=>{const r=validateEnv();if(!r.ok){console.error(r.errors.join('\\n'));process.exit(1)};if(r.warnings.length){console.warn(r.warnings.join('\\n'));}console.log('env ok');})\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
