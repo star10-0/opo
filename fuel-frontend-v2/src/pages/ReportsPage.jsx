@@ -9,7 +9,7 @@ function ReportsPage({ stationId }) {
   const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
   const defaultMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
-  const [filters, setFilters] = useState({ stationId, from: weekStart, to: today, date: today, monthKey: defaultMonthKey, fuelType: "", workerId: "" });
+  const [filters, setFilters] = useState({ stationId, from: weekStart, to: today, date: today, monthKey: defaultMonthKey, fuelType: "", workerId: "", searchText: "" });
   const [state, setState] = useState({ loading: true, error: "", success: "", data: {} });
 
   useEffect(() => {
@@ -20,7 +20,7 @@ function ReportsPage({ stationId }) {
   const rangeValid = !filters.from || !filters.to || filters.from <= filters.to;
 
   const query = useMemo(() => ({
-    stationId: filters.stationId,
+    ...(filters.stationId === "__all__" ? { stationIds: "__all__" } : { stationId: filters.stationId }),
     from: filters.from,
     to: filters.to,
     date: filters.date,
@@ -36,13 +36,17 @@ function ReportsPage({ stationId }) {
       return;
     }
     setState((s) => ({ ...s, loading: true, error: "", success: "" }));
+    const normalizedQuery = { ...query };
+    if (normalizedQuery.stationIds === "__all__") delete normalizedQuery.stationIds;
+
     const requests = await Promise.allSettled([
-      reportsApi.daily(query),
-      reportsApi.weekly(query),
-      reportsApi.monthly(query),
-      reportsApi.variances(query),
-      reportsApi.distributionVehicle(query),
-      reportsApi.deliveriesTanks(query),
+      reportsApi.daily(normalizedQuery),
+      reportsApi.weekly(normalizedQuery),
+      reportsApi.monthly(normalizedQuery),
+      reportsApi.variances(normalizedQuery),
+      reportsApi.distributionVehicle(normalizedQuery),
+      reportsApi.deliveriesTanks(normalizedQuery),
+      reportsApi.analyticsOverview(normalizedQuery),
     ]);
 
     setState({
@@ -56,6 +60,7 @@ function ReportsPage({ stationId }) {
         variances: requests[3].status === "fulfilled" ? requests[3].value : null,
         vehicle: requests[4].status === "fulfilled" ? requests[4].value : null,
         deliveriesTanks: requests[5].status === "fulfilled" ? requests[5].value : null,
+        analytics: requests[6].status === "fulfilled" ? requests[6].value : null,
       },
     });
   };
@@ -94,7 +99,7 @@ function ReportsPage({ stationId }) {
   };
 
   if (state.loading) return <LoadingState />;
-  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks } = state.data;
+  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks, analytics } = state.data;
 
   return (
     <div>
@@ -112,6 +117,7 @@ function ReportsPage({ stationId }) {
           <option value="kerosene">كيروسين</option>
         </select>
         <input value={filters.workerId} placeholder="معرّف العامل (اختياري)" onChange={(e) => setFilters((s) => ({ ...s, workerId: e.target.value }))} />
+        <input value={filters.searchText} placeholder="بحث داخل النتائج" onChange={(e) => setFilters((s) => ({ ...s, searchText: e.target.value }))} />
         <button onClick={load}>تحديث التقارير</button>
       </div>
 
@@ -119,12 +125,19 @@ function ReportsPage({ stationId }) {
       <SuccessState message={state.success} />
       {!daily && !weekly && !monthly && !variances && !vehicle && !deliveriesTanks ? <EmptyState text="لا توجد تقارير متاحة. اختر نطاقًا أوسع أو تأكد من وجود يوم تشغيلي." /> : null}
 
-      <ReportBlock id="daily-report" title="التقرير اليومي" report={daily} onPrint={() => printSection("daily-report")} onExport={() => exportCsv("daily")} />
-      <ReportBlock id="weekly-report" title="التقرير الأسبوعي" report={weekly} onExport={() => exportCsv("weekly")} />
-      <ReportBlock id="monthly-report" title="التقرير الشهري" report={monthly} onExport={() => exportCsv("monthly")} />
-      <ReportBlock id="variance-report" title="تقرير الفروقات" report={variances} onExport={() => exportCsv("variances")} />
-      <ReportBlock id="vehicle-report" title="تقرير سيارة التوزيع" report={vehicle} onExport={() => exportCsv("distributionVehicle")} />
-      <ReportBlock id="tanks-report" title="تقرير ملخص الصهاريج والخزانات" report={deliveriesTanks} onPrint={() => printSection("tanks-report")} onExport={() => exportCsv("deliveriesTanks")} />
+      <ReportBlock id="daily-report" title="التقرير اليومي" report={daily} searchText={filters.searchText} onPrint={() => printSection("daily-report")} onExport={() => exportCsv("daily")} />
+      <ReportBlock id="weekly-report" title="التقرير الأسبوعي" report={weekly} searchText={filters.searchText} onExport={() => exportCsv("weekly")} />
+      <ReportBlock id="monthly-report" title="التقرير الشهري" report={monthly} searchText={filters.searchText} onExport={() => exportCsv("monthly")} />
+      <ReportBlock id="variance-report" title="تقرير الفروقات" report={variances} searchText={filters.searchText} onExport={() => exportCsv("variances")} />
+      <ReportBlock id="vehicle-report" title="تقرير سيارة التوزيع" report={vehicle} searchText={filters.searchText} onExport={() => exportCsv("distributionVehicle")} />
+      <ReportBlock id="tanks-report" title="تقرير ملخص الصهاريج والخزانات" report={deliveriesTanks} searchText={filters.searchText} onPrint={() => printSection("tanks-report")} onExport={() => exportCsv("deliveriesTanks")} />
+
+      {analytics ? (
+        <section style={card}>
+          <strong>مؤشرات تحليلية متقدمة</strong>
+          <pre style={pre}>{JSON.stringify({ kpis: analytics.kpis, stationsScope: analytics.stationsScope, topVarianceRows: analytics.topVarianceRows }, null, 2)}</pre>
+        </section>
+      ) : null}
 
       <div style={actionsBar}>
         <button onClick={() => printSection("daily-report")}>طباعة التقرير اليومي</button>
@@ -136,7 +149,14 @@ function ReportsPage({ stationId }) {
   );
 }
 
-function ReportBlock({ id, title, report, onPrint, onExport }) {
+function ReportBlock({ id, title, report, searchText = "", onPrint, onExport }) {
+  const term = String(searchText || "").trim().toLowerCase();
+  const items = report?.items || report?.deliveries || [];
+  const filteredItems = !term ? items : items.filter((row) => Object.values(row || {}).some((value) => String(value ?? "").toLowerCase().includes(term)));
+  const renderPayload = report
+    ? { ...report, items: report.items ? filteredItems : report.items, deliveries: report.deliveries ? filteredItems : report.deliveries }
+    : report;
+
   return (
     <section id={id} style={card}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
@@ -148,8 +168,8 @@ function ReportBlock({ id, title, report, onPrint, onExport }) {
       </div>
       {!report ? <EmptyState text="لا توجد بيانات لهذا القسم" /> : (
         <>
-          <pre style={pre}>{JSON.stringify(report.totals || report, null, 2)}</pre>
-          <small>عدد السجلات: {report.items?.length || report.deliveries?.length || 0}</small>
+          <pre style={pre}>{JSON.stringify(renderPayload?.totals || renderPayload, null, 2)}</pre>
+          <small>عدد السجلات: {filteredItems.length}</small>
         </>
       )}
     </section>

@@ -34,9 +34,20 @@ function getDateRange(query = {}) {
 }
 
 function buildCommonFilters(query = {}) {
-  const { stationId, fuelType, workerId, status } = query;
+  const { stationId, stationIds, fuelType, workerId, status } = query;
   const filters = { isDeleted: false };
-  if (stationId) filters.stationId = stationId;
+
+  const parsedStationIds = String(stationIds || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (parsedStationIds.length) {
+    filters.stationId = { $in: parsedStationIds };
+  } else if (stationId) {
+    filters.stationId = stationId;
+  }
+
   if (fuelType) filters.fuelType = fuelType;
   if (workerId) filters.primaryWorkerId = workerId;
   if (status) filters.status = status;
@@ -63,6 +74,21 @@ function comparePeriods(currentRows = [], prevRows = []) {
   const salesDelta = current.totalAmount - previous.totalAmount;
   const litersDelta = current.totalLiters - previous.totalLiters;
   return { current, previous, salesDelta, litersDelta };
+}
+
+
+function parseStationIds(value, fallback) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(",");
+  const ids = raw.map((item) => String(item).trim()).filter(Boolean);
+  if (ids.length) return ids;
+  return fallback ? [fallback] : [];
+}
+
+function calcPercentChange(current, previous) {
+  const safeCurrent = Number(current || 0);
+  const safePrevious = Number(previous || 0);
+  if (safePrevious === 0) return safeCurrent === 0 ? 0 : 100;
+  return Number((((safeCurrent - safePrevious) / safePrevious) * 100).toFixed(2));
 }
 
 function rowsToCsv(rows = []) {
@@ -130,7 +156,7 @@ router.get("/distribution-vehicle", async (req, res) => {
   try {
     const { start, end } = getDateRange(req.query);
     const filters = { isDeleted: false };
-    if (req.query.stationId) filters.stationId = req.query.stationId;
+    if (req.query.stationIds) { filters.stationId = { $in: String(req.query.stationIds).split(",").map((id) => id.trim()).filter(Boolean) }; } else if (req.query.stationId) filters.stationId = req.query.stationId;
     if (req.query.fuelType) filters.fuelType = req.query.fuelType;
 
     const rows = await DistributionVehicleSession.find({ ...filters, createdAt: { $gte: start, $lte: end } }).sort({ createdAt: -1 });
@@ -147,11 +173,16 @@ router.get("/distribution-vehicle", async (req, res) => {
 
 router.get("/deliveries-tanks", async (req, res) => {
   try {
-    const { stationId, monthKey, fuelType } = req.query;
+    const { stationId, stationIds, monthKey, fuelType } = req.query;
     const deliveryFilters = { isDeleted: false };
     const tankFilters = {};
 
-    if (stationId) {
+    const scopedStationIds = String(stationIds || "").split(",").map((id) => id.trim()).filter(Boolean);
+
+    if (scopedStationIds.length) {
+      deliveryFilters.stationId = { $in: scopedStationIds };
+      tankFilters.stationId = { $in: scopedStationIds };
+    } else if (stationId) {
       deliveryFilters.stationId = stationId;
       tankFilters.stationId = stationId;
     }
@@ -192,6 +223,82 @@ router.get("/deliveries-tanks", async (req, res) => {
   }
 });
 
+
+router.get("/analytics/overview", async (req, res) => {
+  try {
+    const { start, end } = getDateRange(req.query);
+    const filters = buildCommonFilters(req.query);
+    const stationIds = parseStationIds(req.query.stationIds, req.query.stationId);
+
+    const currentRows = await WorkerClosing.find({
+      ...filters,
+      ...(stationIds.length ? { stationId: { $in: stationIds } } : {}),
+      createdAt: { $gte: start, $lte: end },
+    }).sort({ createdAt: -1 });
+
+    const duration = end.getTime() - start.getTime();
+    const prevStart = new Date(start.getTime() - duration - 1);
+    const prevEnd = new Date(start.getTime() - 1);
+    const previousRows = await WorkerClosing.find({
+      ...filters,
+      ...(stationIds.length ? { stationId: { $in: stationIds } } : {}),
+      createdAt: { $gte: prevStart, $lte: prevEnd },
+    });
+
+    const currentTotals = sumClosings(currentRows);
+    const previousTotals = sumClosings(previousRows);
+
+    const byStation = currentRows.reduce((acc, row) => {
+      const key = String(row.stationId || "unknown");
+      if (!acc[key]) {
+        acc[key] = { stationId: key, totalAmount: 0, totalVariance: 0, totalLiters: 0, closingsCount: 0 };
+      }
+      acc[key].totalAmount += Number(row.grossSalesAmount || 0);
+      acc[key].totalVariance += Number(row.variance || 0);
+      acc[key].totalLiters += Number(row.totalSoldLiters || 0);
+      acc[key].closingsCount += 1;
+      return acc;
+    }, {});
+
+    const topVarianceRows = [...currentRows]
+      .sort((a, b) => Math.abs(Number(b.variance || 0)) - Math.abs(Number(a.variance || 0)))
+      .slice(0, 5)
+      .map((row) => ({
+        id: row._id,
+        stationId: row.stationId,
+        pumpAssignmentId: row.pumpAssignmentId,
+        workerId: row.primaryWorkerId,
+        variance: Number(row.variance || 0),
+        createdAt: row.createdAt,
+        status: row.status,
+      }));
+
+    const kpis = {
+      avgAmountPerClosing: currentRows.length ? Number((currentTotals.totalAmount / currentRows.length).toFixed(2)) : 0,
+      avgLitersPerClosing: currentRows.length ? Number((currentTotals.totalLiters / currentRows.length).toFixed(2)) : 0,
+      varianceRatePct: currentTotals.totalAmount ? Number(((currentTotals.totalVariance / currentTotals.totalAmount) * 100).toFixed(2)) : 0,
+      salesChangePct: calcPercentChange(currentTotals.totalAmount, previousTotals.totalAmount),
+      litersChangePct: calcPercentChange(currentTotals.totalLiters, previousTotals.totalLiters),
+    };
+
+    res.json({
+      success: true,
+      data: {
+        period: { start, end },
+        previousPeriod: { start: prevStart, end: prevEnd },
+        stationsScope: stationIds,
+        totals: currentTotals,
+        previousTotals,
+        kpis,
+        byStation: Object.values(byStation),
+        topVarianceRows,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.get("/export/csv", async (req, res) => {
   try {
     const reportType = req.query.reportType || "daily";
@@ -211,7 +318,7 @@ router.get("/export/csv", async (req, res) => {
     let rows = [];
     if (reportType === "deliveriesTanks") {
       const deliveryFilters = { isDeleted: false };
-      if (req.query.stationId) deliveryFilters.stationId = req.query.stationId;
+      if (req.query.stationIds) { deliveryFilters.stationId = { $in: String(req.query.stationIds).split(",").map((id) => id.trim()).filter(Boolean) }; } else if (req.query.stationId) deliveryFilters.stationId = req.query.stationId;
       if (req.query.monthKey) deliveryFilters.monthKey = req.query.monthKey;
       if (req.query.fuelType) deliveryFilters.fuelType = req.query.fuelType;
       const deliveries = await TankDelivery.find(deliveryFilters).sort({ deliveryDate: -1 });
@@ -227,7 +334,7 @@ router.get("/export/csv", async (req, res) => {
     } else if (reportType === "distributionVehicle") {
       const { start, end } = getDateRange(req.query);
       const filters = { isDeleted: false };
-      if (req.query.stationId) filters.stationId = req.query.stationId;
+      if (req.query.stationIds) { filters.stationId = { $in: String(req.query.stationIds).split(",").map((id) => id.trim()).filter(Boolean) }; } else if (req.query.stationId) filters.stationId = req.query.stationId;
       const items = await DistributionVehicleSession.find({ ...filters, createdAt: { $gte: start, $lte: end } });
       rows = items.map((row) => ({
         createdAt: row.createdAt,
