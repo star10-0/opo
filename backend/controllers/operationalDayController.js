@@ -32,6 +32,12 @@ export const closeOperationalDayHandler = async (req, res) => {
 export const listOperationalDaysHandler = async (req, res) => {
   try {
     const days = await listOperationalDays(req.query);
+
+    if (req.path === "/current") {
+      const current = Array.isArray(days) ? days.find((d) => d.status === "open") || null : null;
+      return res.json(current);
+    }
+
     res.json(days);
   } catch (error) {
     handleError(res, error);

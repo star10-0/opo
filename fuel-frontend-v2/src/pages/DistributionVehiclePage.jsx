@@ -27,7 +27,7 @@ function DistributionVehiclePage({ stationId }) {
   if (loading) return <LoadingState />;
   return (
     <div>
-      <h3>Distribution Vehicle</h3>
+      <h3>سيارة التوزيع</h3>
       {error ? <ErrorState error={error} /> : null}
       {vehicles.length === 0 ? <EmptyState text="لا توجد سيارات توزيع" /> : vehicles.map((v) => <div key={v._id}>{v.vehicleName} ({v.vehicleCode})</div>)}
       <h4>جلسات العمل</h4>

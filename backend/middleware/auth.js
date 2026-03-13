@@ -1,15 +1,30 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-const auth = async (req,res,next)=>{
-  const token = req.headers.authorization?.split(" ")[1];
-  if(!token) return res.status(401).json({message:"Unauthorized"});
-  try{
+const auth = async (req, res, next) => {
+  const authHeader = req.headers.authorization || "";
+  const [scheme, token] = authHeader.split(" ");
+
+  if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ success: false, message: "JWT secret is not configured" });
+  }
+
+  try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select("_id role isActive stationAccess permissions");
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    req.user = user;
     next();
-  }catch(err){
-    return res.status(401).json({message:"Invalid token"});
+  } catch {
+    return res.status(401).json({ success: false, message: "Invalid token" });
   }
 };
 

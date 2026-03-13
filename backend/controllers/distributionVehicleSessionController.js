@@ -23,3 +23,13 @@ export async function closeDistributionVehicleSession(req, res, next) {
     next(error);
   }
 }
+
+
+export async function listDistributionVehicleSessions(req, res, next) {
+  try {
+    const sessions = await distributionVehicleSessionService.list(req.query.stationId);
+    res.json({ success: true, data: sessions });
+  } catch (error) {
+    next(error);
+  }
+}

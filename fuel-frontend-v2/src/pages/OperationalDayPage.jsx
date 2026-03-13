@@ -35,7 +35,7 @@ function OperationalDayPage({ stationId }) {
 
   return (
     <div>
-      <h3>Operational Day</h3>
+      <h3>اليوم التشغيلي</h3>
       <SuccessState message={state.success} />
       <div>الحالة: {state.day.status}</div>
       <div>الفتح: {state.day.openedAt || "--"}</div>
