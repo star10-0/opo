@@ -11,6 +11,7 @@ export const reportsApi = {
   variances: (params) => apiGet(`/reports/variances?${buildQuery(params)}`),
   distributionVehicle: (params) => apiGet(`/reports/distribution-vehicle?${buildQuery(params)}`),
   deliveriesTanks: (params) => apiGet(`/reports/deliveries-tanks?${buildQuery(params)}`),
+  analyticsOverview: (params) => apiGet(`/reports/analytics/overview?${buildQuery(params)}`),
   exportCsvUrl: (params) => `/reports/export/csv?${buildQuery(params)}`,
   exportPdf: (params) => apiGet(`/reports/export/pdf?${buildQuery(params)}`),
 };
