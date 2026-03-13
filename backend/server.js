@@ -106,8 +106,29 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT || 5000);
 let server;
 
+const validateRuntimeConfig = () => {
+  const warnings = [];
+
+  if (isProd && !enforceAuth) {
+    warnings.push("ENFORCE_AUTH=false in production");
+  }
+
+  if (enforceAuth && !process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is required when ENFORCE_AUTH=true");
+  }
+
+  if (isProd && !allowedOrigins.length) {
+    warnings.push("FRONTEND_URL is empty in production, CORS allows any origin");
+  }
+
+  return warnings;
+};
+
 const start = async () => {
   try {
+    const warnings = validateRuntimeConfig();
+    warnings.forEach((warning) => console.warn(`⚠️ ${warning}`));
+
     await connectDB();
   } catch (error) {
     if (isProd) {
@@ -129,7 +150,15 @@ const shutdown = (signal) => {
   if (!server) {
     process.exit(0);
   }
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+      }
+    } finally {
+      process.exit(0);
+    }
+  });
 };
 
 process.on("SIGINT", () => shutdown("SIGINT"));
