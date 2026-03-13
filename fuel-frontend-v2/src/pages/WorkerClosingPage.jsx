@@ -41,6 +41,7 @@ function WorkerClosingPage({ stationId }) {
   return (
     <div>
       <h3>إغلاقات العمال</h3>
+      <p style={{ color: "#64748b", marginTop: 0 }}>راجع الحالات بسرعة، ثم أرسل الحساب غير المؤرشف للمحاسب.</p>
       <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <select value={filters.status} onChange={(e) => setFilters((s) => ({ ...s, status: e.target.value }))}>
           <option value="">كل الحالات</option>
@@ -49,13 +50,13 @@ function WorkerClosingPage({ stationId }) {
           <option value="archived">مؤرشف</option>
           <option value="suspended">معلق</option>
         </select>
-        <input placeholder="فلترة حسب workerId" value={filters.workerId} onChange={(e) => setFilters((s) => ({ ...s, workerId: e.target.value }))} />
+        <input placeholder="فلترة حسب معرّف العامل" value={filters.workerId} onChange={(e) => setFilters((s) => ({ ...s, workerId: e.target.value }))} />
         <button onClick={printPage}>طباعة حساب العامل</button>
         <button onClick={printPage}>طباعة تقرير المحاسب</button>
       </div>
       {state.error ? <ErrorState error={state.error} /> : null}
       <SuccessState message={state.success} />
-      {filteredItems.length === 0 ? <EmptyState text="لا توجد حسابات" /> : filteredItems.map((w) => {
+      {filteredItems.length === 0 ? <EmptyState text="لا توجد حسابات مطابقة للفلاتر الحالية." /> : filteredItems.map((w) => {
         const locked = ["archived", "approval_pending", "suspended"].includes(w.status);
         return (
           <div key={w._id} style={{ background: "#fff", marginBottom: 10, padding: 10, border: "1px solid #e2e8f0" }}>
