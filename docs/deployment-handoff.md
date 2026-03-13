@@ -50,3 +50,9 @@ curl -s http://localhost:5000/api/health
 - اختبار تسجيل الدخول والصلاحيات الأساسية.
 - اختبار صفحة التقارير واللوحة الرئيسية.
 - تأكيد `GET /api/health` يعمل بعد الإقلاع.
+
+## 6) User/Operations Documentation Pack (Phase 11)
+- `docs/user-guide.md`
+- `docs/operational-guide.md`
+- `docs/troubleshooting-guide.md`
+- `docs/final-handoff-notes-phase-11.md`
