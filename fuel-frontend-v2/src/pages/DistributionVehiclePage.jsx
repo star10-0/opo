@@ -28,8 +28,9 @@ function DistributionVehiclePage({ stationId }) {
   return (
     <div>
       <h3>سيارة التوزيع</h3>
+      <p style={{ color: "#64748b", marginTop: 0 }}>تابع السيارات النشطة والجلسات اليومية لمعرفة أداء البيع خارج المضخات.</p>
       {error ? <ErrorState error={error} /> : null}
-      {vehicles.length === 0 ? <EmptyState text="لا توجد سيارات توزيع" /> : vehicles.map((v) => <div key={v._id}>{v.vehicleName} ({v.vehicleCode})</div>)}
+      {vehicles.length === 0 ? <EmptyState text="لا توجد سيارات توزيع بعد. أضف سيارة توزيع من إعدادات التشغيل" /> : vehicles.map((v) => <div key={v._id}>{v.vehicleName} ({v.vehicleCode})</div>)}
       <h4>جلسات العمل</h4>
       {sessions.length === 0 ? <EmptyState text="لا توجد جلسات" /> : sessions.map((s) => (
         <div key={s._id} style={{ border: "1px solid #e2e8f0", padding: 8, marginBottom: 6 }}>

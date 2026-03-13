@@ -55,11 +55,12 @@ function PumpAssignmentsPage({ stationId }) {
   return (
     <div>
       <h3>استلامات المضخات</h3>
+      <p style={{ color: "#64748b", marginTop: 0 }}>ابدأ بالقراءة الوسيطة عند تغيير السعر، ثم أنهِ الحساب عند نهاية الوردية.</p>
       {state.error ? <ErrorState error={state.error} /> : null}
       <SuccessState message={state.success} />
       {!state.dayId ? <EmptyState text="لا يوجد يوم تشغيلي نشط. ابدأ بفتح يوم تشغيلي أولاً." /> : null}
       {state.pumpsCount === 0 ? <EmptyState text="لا توجد مضخات في هذه المحطة بعد." /> : null}
-      {state.items.length === 0 ? <EmptyState text="لا توجد استلامات مضخات حالياً." /> : (
+      {state.items.length === 0 ? <EmptyState text="لا توجد استلامات مضخات حاليًا. راجع صفحة اليوم التشغيلي لبدء الاستلام." /> : (
         <table style={{ width: "100%" }}><thead><tr><th>المضخة</th><th>العامل</th><th>مساعدون</th><th>البداية</th><th>النهاية</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
           {state.items.map((i) => (
             <tr key={i._id}>
