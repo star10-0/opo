@@ -1,20 +1,31 @@
 import { useEffect, useState } from "react";
-import { meterReadingsApi, operationalDayApi, pumpAssignmentsApi } from "../api";
+import { meterReadingsApi, operationalDayApi, pumpAssignmentsApi, pumpsApi } from "../api";
 import { can } from "../lib/permissions";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 
 function PumpAssignmentsPage({ stationId }) {
-  const [state, setState] = useState({ loading: true, error: "", success: "", items: [], dayId: "" });
+  const [state, setState] = useState({ loading: true, error: "", success: "", items: [], dayId: "", pumpsCount: 0 });
 
   const load = async () => {
     if (!stationId) return;
     setState((s) => ({ ...s, loading: true, error: "", success: "" }));
     try {
-      const day = await operationalDayApi.getCurrent(stationId);
-      const list = await pumpAssignmentsApi.list({ stationId, operationalDayId: day?._id });
-      setState({ loading: false, error: "", success: "", items: list?.items || list || [], dayId: day?._id });
+      const [day, list, pumps] = await Promise.all([
+        operationalDayApi.getCurrent(stationId),
+        pumpAssignmentsApi.list({ stationId }),
+        pumpsApi.list({ stationId })
+      ]);
+
+      setState({
+        loading: false,
+        error: "",
+        success: "",
+        items: list?.items || list || [],
+        dayId: day?._id,
+        pumpsCount: (pumps?.items || pumps || []).length,
+      });
     } catch (e) {
-      setState({ loading: false, error: e.message || "فشل تحميل الاستلامات", success: "", items: [], dayId: "" });
+      setState({ loading: false, error: e.message || "فشل تحميل الاستلامات", success: "", items: [], dayId: "", pumpsCount: 0 });
     }
   };
 
@@ -46,7 +57,9 @@ function PumpAssignmentsPage({ stationId }) {
       <h3>استلامات المضخات</h3>
       {state.error ? <ErrorState error={state.error} /> : null}
       <SuccessState message={state.success} />
-      {state.items.length === 0 ? <EmptyState text="لا توجد استلامات مضخات" /> : (
+      {!state.dayId ? <EmptyState text="لا يوجد يوم تشغيلي نشط. ابدأ بفتح يوم تشغيلي أولاً." /> : null}
+      {state.pumpsCount === 0 ? <EmptyState text="لا توجد مضخات في هذه المحطة بعد." /> : null}
+      {state.items.length === 0 ? <EmptyState text="لا توجد استلامات مضخات حالياً." /> : (
         <table style={{ width: "100%" }}><thead><tr><th>المضخة</th><th>العامل</th><th>مساعدون</th><th>البداية</th><th>النهاية</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>
           {state.items.map((i) => (
             <tr key={i._id}>
