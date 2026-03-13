@@ -9,20 +9,15 @@ function ReportsPage({ stationId }) {
   const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
   const defaultMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
-  const [filters, setFilters] = useState({
-    stationId,
-    from: weekStart,
-    to: today,
-    date: today,
-    monthKey: defaultMonthKey,
-    fuelType: "",
-    workerId: "",
-  });
+  const [filters, setFilters] = useState({ stationId, from: weekStart, to: today, date: today, monthKey: defaultMonthKey, fuelType: "", workerId: "" });
   const [state, setState] = useState({ loading: true, error: "", success: "", data: {} });
 
   useEffect(() => {
     setFilters((prev) => ({ ...prev, stationId }));
   }, [stationId]);
+
+  const monthValid = /^\d{4}-(0[1-9]|1[0-2])$/.test(filters.monthKey);
+  const rangeValid = !filters.from || !filters.to || filters.from <= filters.to;
 
   const query = useMemo(() => ({
     stationId: filters.stationId,
@@ -36,6 +31,10 @@ function ReportsPage({ stationId }) {
 
   const load = async () => {
     if (!filters.stationId) return;
+    if (!monthValid || !rangeValid) {
+      setState((s) => ({ ...s, error: !monthValid ? "الشهر يجب أن يكون بصيغة YYYY-MM." : "تحقق من نطاق التاريخ: البداية يجب أن تكون قبل النهاية." }));
+      return;
+    }
     setState((s) => ({ ...s, loading: true, error: "", success: "" }));
     const requests = await Promise.allSettled([
       reportsApi.daily(query),
@@ -100,24 +99,25 @@ function ReportsPage({ stationId }) {
   return (
     <div>
       <h3>التقارير النهائية</h3>
+      <p style={{ color: "#64748b", marginTop: 0 }}>راجع النطاق الزمني بدقة ثم حدّث التقارير. يمكنك الطباعة أو التصدير CSV من كل قسم.</p>
       <div style={filtersGrid}>
-        <input type="date" value={filters.date} onChange={(e) => setFilters((s) => ({ ...s, date: e.target.value }))} />
-        <input type="date" value={filters.from} onChange={(e) => setFilters((s) => ({ ...s, from: e.target.value }))} />
-        <input type="date" value={filters.to} onChange={(e) => setFilters((s) => ({ ...s, to: e.target.value }))} />
-        <input value={filters.monthKey} placeholder="YYYY-MM" onChange={(e) => setFilters((s) => ({ ...s, monthKey: e.target.value }))} />
+        <input type="date" aria-label="تاريخ التقرير اليومي" value={filters.date} onChange={(e) => setFilters((s) => ({ ...s, date: e.target.value }))} />
+        <input type="date" aria-label="من تاريخ" value={filters.from} onChange={(e) => setFilters((s) => ({ ...s, from: e.target.value }))} />
+        <input type="date" aria-label="إلى تاريخ" value={filters.to} onChange={(e) => setFilters((s) => ({ ...s, to: e.target.value }))} />
+        <input value={filters.monthKey} placeholder="الشهر (YYYY-MM)" onChange={(e) => setFilters((s) => ({ ...s, monthKey: e.target.value }))} />
         <select value={filters.fuelType} onChange={(e) => setFilters((s) => ({ ...s, fuelType: e.target.value }))}>
           <option value="">كل أنواع الوقود</option>
           <option value="diesel">ديزل</option>
           <option value="gasoline">بنزين</option>
           <option value="kerosene">كيروسين</option>
         </select>
-        <input value={filters.workerId} placeholder="workerId (اختياري)" onChange={(e) => setFilters((s) => ({ ...s, workerId: e.target.value }))} />
+        <input value={filters.workerId} placeholder="معرّف العامل (اختياري)" onChange={(e) => setFilters((s) => ({ ...s, workerId: e.target.value }))} />
         <button onClick={load}>تحديث التقارير</button>
       </div>
 
-      {state.error ? <ErrorState error={state.error} /> : null}
+      <ErrorState error={state.error} />
       <SuccessState message={state.success} />
-      {!daily && !weekly && !monthly && !variances && !vehicle && !deliveriesTanks ? <EmptyState text="لا توجد تقارير متاحة" /> : null}
+      {!daily && !weekly && !monthly && !variances && !vehicle && !deliveriesTanks ? <EmptyState text="لا توجد تقارير متاحة. اختر نطاقًا أوسع أو تأكد من وجود يوم تشغيلي." /> : null}
 
       <ReportBlock id="daily-report" title="التقرير اليومي" report={daily} onPrint={() => printSection("daily-report")} onExport={() => exportCsv("daily")} />
       <ReportBlock id="weekly-report" title="التقرير الأسبوعي" report={weekly} onExport={() => exportCsv("weekly")} />
@@ -131,13 +131,6 @@ function ReportsPage({ stationId }) {
         <button onClick={() => printSection("variance-report")}>طباعة حساب العامل</button>
         <button onClick={() => printSection("monthly-report")}>طباعة تقرير المحاسب</button>
         <button onClick={() => printSection("tanks-report")}>طباعة سجل الصهاريج</button>
-        <button onClick={async () => {
-          try {
-            await reportsApi.exportPdf(query);
-          } catch {
-            setState((s) => ({ ...s, error: "TODO: تصدير PDF الكامل غير مكتمل بعد، استخدم CSV حاليًا." }));
-          }
-        }}>تجربة PDF</button>
       </div>
     </div>
   );
@@ -146,17 +139,17 @@ function ReportsPage({ stationId }) {
 function ReportBlock({ id, title, report, onPrint, onExport }) {
   return (
     <section id={id} style={card}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <strong>{title}</strong>
         <div style={{ display: "flex", gap: 8 }}>
           {onPrint ? <button onClick={onPrint}>طباعة</button> : null}
           {onExport ? <button onClick={onExport}>CSV</button> : null}
         </div>
       </div>
-      {!report ? <EmptyState text="لا توجد بيانات" /> : (
+      {!report ? <EmptyState text="لا توجد بيانات لهذا القسم" /> : (
         <>
           <pre style={pre}>{JSON.stringify(report.totals || report, null, 2)}</pre>
-          <small>حجم السجلات: {report.items?.length || report.deliveries?.length || 0}</small>
+          <small>عدد السجلات: {report.items?.length || report.deliveries?.length || 0}</small>
         </>
       )}
     </section>

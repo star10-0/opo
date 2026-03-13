@@ -43,6 +43,7 @@ function OperationalDayPage({ stationId }) {
   return (
     <div>
       <h3>اليوم التشغيلي</h3>
+      <p style={{ color: "#64748b", marginTop: 0 }}>بعد فتح اليوم التشغيلي، انتقل مباشرة إلى استلامات المضخات لتسجيل القراءات.</p>
       <SuccessState message={state.success} />
       {!state.day ? <EmptyState text="لا يوجد يوم تشغيلي نشط لهذه المحطة." /> : null}
       {state.pumpsCount === 0 ? <EmptyState text="لا توجد مضخات مضافة بعد، أضف مضخة للبدء." /> : null}
@@ -52,7 +53,7 @@ function OperationalDayPage({ stationId }) {
           <div>الفتح: {state.day.openedAt || "--"}</div>
           <div>الإغلاق: {state.day.closedAt || "--"}</div>
           <h4>الاستلامات الحالية</h4>
-          {state.assignments.length === 0 ? <EmptyState text="لا توجد استلامات لهذا اليوم." /> : state.assignments.map((a) => <div key={a._id}>{a.pumpId?.pumpName || a.pumpId} - {a.status}</div>)}
+          {state.assignments.length === 0 ? <EmptyState text="لا توجد استلامات لهذا اليوم بعد. الخطوة التالية: افتح استلامًا لمضخة." /> : state.assignments.map((a) => <div key={a._id}>{a.pumpId?.pumpName || a.pumpId} - {a.status}</div>)}
           {can("archive_or_suspend_reconciliation") && state.day.status !== "closed" ? <button onClick={closeDay}>إغلاق اليوم</button> : null}
         </>
       ) : null}
