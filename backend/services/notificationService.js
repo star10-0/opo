@@ -8,8 +8,13 @@ export const notificationService = {
     return Notification.create(payload);
   },
 
-  async list({ stationId, role }) {
-    const rows = await Notification.find({ stationId, targetRole: role }).sort({ createdAt: -1, date: -1 }).limit(100);
+  async list({ stationId, role, limit }) {
+    const parsedLimit = Number(limit || 50);
+    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 50;
+
+    const rows = await Notification.find({ stationId, targetRole: role })
+      .sort({ createdAt: -1, date: -1 })
+      .limit(safeLimit);
 
     const [variance, pendingClosings, approvals, lowTanks] = await Promise.all([
       WorkerClosing.find({ stationId, isDeleted: false, variance: { $ne: 0 } }).sort({ createdAt: -1 }).limit(5),
@@ -19,12 +24,40 @@ export const notificationService = {
     ]);
 
     const computed = [
-      ...variance.map((v) => ({ type: "variance", message: `تنبيه فرق مالي في حساب ${v._id}: ${v.variance}` })),
-      ...pendingClosings.map((v) => ({ type: "pending_closing", message: `تنبيه حساب معلق للمراجعة: ${v._id}` })),
-      ...approvals.map((v) => ({ type: "approval_new", message: `طلب موافقة جديد: ${v.requestType}` })),
-      ...lowTanks.map((v) => ({ type: "tank_low", message: `انخفاض مستوى الخزان ${v.tankName}` }))
+      ...variance.map((v) => ({
+        type: "variance",
+        source: "computed",
+        priority: "high",
+        createdAt: v.createdAt,
+        message: `تنبيه فرق مالي في حساب ${v._id}: ${v.variance}`,
+      })),
+      ...pendingClosings.map((v) => ({
+        type: "pending_closing",
+        source: "computed",
+        priority: "medium",
+        createdAt: v.createdAt,
+        message: `تنبيه حساب مرسل للمراجعة: ${v._id}`,
+      })),
+      ...approvals.map((v) => ({
+        type: "approval_new",
+        source: "computed",
+        priority: "high",
+        createdAt: v.createdAt,
+        message: `طلب موافقة جديد: ${v.requestType}`,
+      })),
+      ...lowTanks.map((v) => ({
+        type: "tank_low",
+        source: "computed",
+        priority: "medium",
+        createdAt: v.updatedAt || v.createdAt,
+        message: `انخفاض مستوى الخزان ${v.tankName}`,
+      }))
     ];
 
-    return [...computed, ...rows];
+    const merged = [...computed, ...rows]
+      .sort((a, b) => new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime())
+      .slice(0, safeLimit);
+
+    return { items: merged, meta: { limit: safeLimit, computedCount: computed.length, persistedCount: rows.length } };
   }
 };
