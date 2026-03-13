@@ -1,4 +1,5 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   createFuelPricePeriodHandler,
   closeFuelPricePeriodHandler,
@@ -10,11 +11,13 @@ import {
 
 const router = express.Router();
 
-router.post("/", createFuelPricePeriodHandler);
-router.post("/:id/close", closeFuelPricePeriodHandler);
+router.use(requireAuthIfEnabled);
+
+router.post("/", allowRolesIfEnabled(["admin", "manager", "accountant"]), createFuelPricePeriodHandler);
+router.post("/:id/close", allowRolesIfEnabled(["admin", "manager", "accountant"]), closeFuelPricePeriodHandler);
 router.get("/", listFuelPricePeriodsHandler);
 router.get("/:id", getFuelPricePeriodByIdHandler);
-router.put("/:id", updateFuelPricePeriodHandler);
-router.delete("/:id", deleteFuelPricePeriodHandler);
+router.put("/:id", allowRolesIfEnabled(["admin", "manager", "accountant"]), updateFuelPricePeriodHandler);
+router.delete("/:id", allowRolesIfEnabled(["admin", "manager"]), deleteFuelPricePeriodHandler);
 
 export default router;

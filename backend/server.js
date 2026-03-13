@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
 import auth from "./middleware/auth.js";
@@ -38,9 +39,21 @@ const allowedOrigins = (process.env.FRONTEND_URL || "")
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
+const corsOrigin = (origin, callback) => {
+  if (!origin) return callback(null, true);
+
+  if (!allowedOrigins.length) {
+    if (!isProd) return callback(null, true);
+    return callback(new Error("CORS is not configured for production"));
+  }
+
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("Origin is not allowed by CORS"));
+};
+
 app.use(
   cors({
-    origin: allowedOrigins.length ? allowedOrigins : true,
+    origin: corsOrigin,
     credentials: true,
   })
 );
@@ -56,7 +69,18 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, status: "ok", authEnforced: enforceAuth });
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = dbState === 1 ? "connected" : dbState === 2 ? "connecting" : "disconnected";
+
+  res.json({
+    success: true,
+    status: dbState === 1 || !isProd ? "ok" : "degraded",
+    authEnforced: enforceAuth,
+    env: process.env.NODE_ENV || "development",
+    db: dbStatus,
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 if (enforceAuth) {
@@ -100,7 +124,10 @@ const start = async () => {
   }
 
   server = app.listen(PORT, () => {
-    console.log(`🚀 Server listening on port ${PORT}`);
+    console.log(`🚀 Server listening on port ${PORT} [env=${process.env.NODE_ENV || "development"}] [auth=${enforceAuth ? "on" : "off"}]`);
+    if (isProd && !allowedOrigins.length) {
+      console.warn("⚠️ FRONTEND_URL is empty in production, cross-origin requests will be rejected by CORS.");
+    }
   });
 };
 

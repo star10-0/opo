@@ -7,7 +7,7 @@ import {
 } from "../services/meterReadingService.js";
 
 const handleError = (res, error) => {
-  res.status(error.statusCode || 500).json({ message: error.message || "Internal server error" });
+  res.status(error.statusCode || 500).json({ success: false, message: error.message || "Internal server error" });
 };
 
 export const createMeterReadingHandler = async (req, res) => {

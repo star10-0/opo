@@ -1,4 +1,5 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import {
   closeDistributionVehicleSession,
   listDistributionVehicleSessions,
@@ -7,8 +8,10 @@ import {
 
 const router = express.Router();
 
+router.use(requireAuthIfEnabled);
+
 router.get("/", listDistributionVehicleSessions);
-router.post("/", openDistributionVehicleSession);
-router.post("/:id/close", closeDistributionVehicleSession);
+router.post("/", allowRolesIfEnabled(["admin", "manager", "worker"]), openDistributionVehicleSession);
+router.post("/:id/close", allowRolesIfEnabled(["admin", "manager", "worker"]), closeDistributionVehicleSession);
 
 export default router;

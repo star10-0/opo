@@ -1,9 +1,12 @@
 import express from "express";
+import { allowRolesIfEnabled, requireAuthIfEnabled } from "../middleware/accessControl.js";
 import StorageTank from "../models/StorageTank.js";
 
 const router = express.Router();
 
-router.post("/", async (req, res) => {
+router.use(requireAuthIfEnabled);
+
+router.post("/", allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
     const tank = new StorageTank(req.body);
     await tank.save();
@@ -28,7 +31,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
@@ -46,14 +49,14 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
     const tank = await StorageTank.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
       {
         isDeleted: true,
         deletedAt: new Date(),
-        deletedBy: req.user?._id
+        deletedBy: req.user?._id,
       },
       { new: true }
     );

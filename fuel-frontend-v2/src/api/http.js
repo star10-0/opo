@@ -35,9 +35,13 @@ const unwrap = (response) => {
 };
 
 const normalizeError = (error) => {
+  const status = error?.response?.status;
   const message =
     error?.response?.data?.message ||
+    (status === 401 ? "انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى" : "") ||
+    (status === 403 ? "ليس لديك صلاحية لتنفيذ هذا الإجراء" : "") ||
     (error?.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالخادم" : "") ||
+    (!error?.response ? "تعذر الوصول إلى الخادم، تحقق من الاتصال أو إعدادات الرابط" : "") ||
     error?.message ||
     "حدث خطأ غير متوقع أثناء الاتصال بالخادم";
   return new Error(message);

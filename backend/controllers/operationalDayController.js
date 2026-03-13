@@ -8,7 +8,7 @@ import {
 } from "../services/operationalDayService.js";
 
 const handleError = (res, error) => {
-  res.status(error.statusCode || 500).json({ message: error.message || "Internal server error" });
+  res.status(error.statusCode || 500).json({ success: false, message: error.message || "Internal server error" });
 };
 
 export const openOperationalDayHandler = async (req, res) => {
