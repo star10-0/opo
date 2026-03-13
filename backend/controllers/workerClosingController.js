@@ -26,10 +26,15 @@ export async function submitWorkerClosing(req, res, next) {
 
 export async function listWorkerClosings(req, res, next) {
   try {
+    if (!req.query.stationId) {
+      throw new Error("stationId مطلوب لعرض حسابات العامل");
+    }
+
     const data = await workerClosingService.list({
       stationId: req.query.stationId,
       operationalDayId: req.query.operationalDayId,
       status: req.query.status,
+      limit: req.query.limit,
     });
     res.json({ success: true, data });
   } catch (error) {

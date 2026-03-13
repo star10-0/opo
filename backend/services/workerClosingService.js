@@ -53,6 +53,22 @@ export const workerClosingService = {
   },
 
   async list(filters = {}) {
-    return WorkerClosing.find({ ...filters, isDeleted: false }).sort({ createdAt: -1 });
+    const query = {
+      stationId: filters.stationId,
+      operationalDayId: filters.operationalDayId,
+      status: filters.status,
+      isDeleted: false,
+    };
+
+    Object.keys(query).forEach((key) => {
+      if (query[key] === undefined || query[key] === null || query[key] === "") {
+        delete query[key];
+      }
+    });
+
+    const parsedLimit = Number(filters.limit || 100);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 300) : 100;
+
+    return WorkerClosing.find(query).sort({ createdAt: -1 }).limit(limit);
   },
 };
