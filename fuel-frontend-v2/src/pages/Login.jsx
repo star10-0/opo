@@ -12,7 +12,10 @@ function Login() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  const demoLoginEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
+
   const fillDemo = (role) => {
+    if (!demoLoginEnabled) return;
     localStorage.setItem("token", "demo-token");
     localStorage.setItem("role", role);
     navigate("/dashboard");
@@ -55,13 +58,17 @@ function Login() {
           <button type="submit" style={primaryBtn} disabled={loading}>{loading ? t("loggingIn") : t("login")}</button>
         </form>
 
-        <hr style={{ margin: "20px 0" }} />
-        <p style={{ color: "#6b7280", marginBottom: 10 }}>{t("demoAccess")}</p>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={() => fillDemo("admin")} style={secondaryBtn}>{t("adminDemo")}</button>
-          <button onClick={() => fillDemo("accountant")} style={secondaryBtn}>{t("accountantDemo")}</button>
-          <button onClick={() => fillDemo("worker")} style={secondaryBtn}>{t("workerDemo")}</button>
-        </div>
+        {demoLoginEnabled ? (
+          <>
+            <hr style={{ margin: "20px 0" }} />
+            <p style={{ color: "#6b7280", marginBottom: 10 }}>{t("demoAccess")}</p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button onClick={() => fillDemo("admin")} style={secondaryBtn}>{t("adminDemo")}</button>
+              <button onClick={() => fillDemo("accountant")} style={secondaryBtn}>{t("accountantDemo")}</button>
+              <button onClick={() => fillDemo("worker")} style={secondaryBtn}>{t("workerDemo")}</button>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

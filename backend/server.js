@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
 import auth from "./middleware/auth.js";
+import { enforceStationScopeIfEnabled } from "./middleware/accessControl.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 import tankRoutes from "./routes/tankRoutes.js";
@@ -66,21 +67,31 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   const dbReady = [1, 2].includes(Number(mongoose.connection.readyState));
-  res.json({
+  const basePayload = {
     success: true,
     status: "ok",
-    authEnforced: enforceAuth,
-    environment: process.env.NODE_ENV || "development",
-    uptimeSeconds: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
-    allowedOrigins: allowedOrigins.length ? allowedOrigins : ["*"],
     dbConnected: dbReady,
-  });
+  };
+
+  if (!isProd) {
+    return res.json({
+      ...basePayload,
+      authEnforced: enforceAuth,
+      environment: process.env.NODE_ENV || "development",
+      uptimeSeconds: Math.round(process.uptime()),
+      allowedOrigins: allowedOrigins.length ? allowedOrigins : ["*"],
+    });
+  }
+
+  return res.json(basePayload);
 });
 
 if (enforceAuth) {
   app.use("/api", auth);
 }
+
+app.use("/api", enforceStationScopeIfEnabled);
 
 app.use("/api/stations", stationRoutes);
 app.use("/api/tanks", tankRoutes);

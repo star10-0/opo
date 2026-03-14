@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.use(requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager", "accountant"]));
 
-router.get("/preview", async (req, res) => {
+router.get("/preview", async (req, res, next) => {
   try {
     const data = await automationService.preview({
       stationId: req.query.stationId,
@@ -15,11 +15,11 @@ router.get("/preview", async (req, res) => {
     });
     res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.post("/run-manual", async (req, res) => {
+router.post("/run-manual", async (req, res, next) => {
   try {
     const data = await automationService.runManual({
       stationId: req.body.stationId,
@@ -30,16 +30,16 @@ router.post("/run-manual", async (req, res) => {
     });
     res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
-router.get("/pending-review-reminders", async (req, res) => {
+router.get("/pending-review-reminders", async (req, res, next) => {
   try {
     const data = await automationService.pendingReviewBacklog({ stationId: req.query.stationId });
     res.json({ success: true, data });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 });
 
