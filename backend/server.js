@@ -29,6 +29,7 @@ import stationRoutes from "./routes/stationRoutes.js";
 import deliveryRoutes from "./routes/deliveryRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import automationRoutes from "./routes/automationRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
@@ -86,6 +87,8 @@ app.get("/api/health", (req, res) => {
 
   return res.json(basePayload);
 });
+
+app.use("/api/auth", authRoutes);
 
 if (enforceAuth) {
   app.use("/api", auth);

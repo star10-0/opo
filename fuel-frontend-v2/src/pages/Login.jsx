@@ -27,13 +27,23 @@ function Login() {
     setLoading(true);
     try {
       const res = await API.post("/auth/login", form);
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.user.role);
-      localStorage.setItem("userName", res.data.user.name);
-      localStorage.setItem("userId", res.data.user._id || "");
+      const payload = res?.data?.data;
+      localStorage.setItem("token", payload?.token || "");
+      localStorage.setItem("role", payload?.user?.role || "");
+      localStorage.setItem("userName", payload?.user?.name || "");
+      localStorage.setItem("userId", payload?.user?._id || "");
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message || t("loginFailed"));
+      const status = err?.response?.status;
+      if (status === 404) {
+        setError(t("loginNotFound"));
+      } else if (status === 401) {
+        setError(t("loginUnauthorized"));
+      } else if (status >= 500) {
+        setError(t("loginServerError"));
+      } else {
+        setError(err?.response?.data?.message || err.message || t("loginFailed"));
+      }
     } finally {
       setLoading(false);
     }

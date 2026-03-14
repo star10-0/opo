@@ -122,6 +122,13 @@
 ### POST /api/distribution-vehicle-sessions/:id/close
 - الهدف: إغلاق جلسة سيارة توزيع
 
+## Authentication
+### POST /api/auth/login
+- الهدف: تسجيل الدخول وإرجاع JWT + بيانات المستخدم الأساسية
+- body:
+  - `email`
+  - `password`
+
 ## Reconciliation
 ### POST /api/reconciliation/:operationalDayId/review
 - الهدف: مراجعة المحاسب واعتماد أو تعليق
