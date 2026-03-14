@@ -26,7 +26,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const user = await User.findById(decoded.id).select("_id role isActive stationAccess permissions");
+    const user = await User.findById(decoded.id).select("_id role isActive stationAccess allowedStations permissions accountType station organization currentStation");
 
     if (!user || !user.isActive) {
       console.warn(`[SECURITY] Inactive or missing user from token: ${decoded.id}`);

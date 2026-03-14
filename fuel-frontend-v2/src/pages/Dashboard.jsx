@@ -13,6 +13,7 @@ import ReportsPage from "./ReportsPage";
 import ApprovalsPage from "./ApprovalsPage";
 import AuditLogPage from "./AuditLogPage";
 import NotificationsPage from "./NotificationsPage";
+import { useAuth } from "../context/AuthContext";
 
 const roleLabels = {
   admin: "مدير النظام",
@@ -37,8 +38,9 @@ const roleNextSteps = {
 
 function Dashboard() {
   const { language, setLanguage, t } = useLanguage();
-  const userName = localStorage.getItem("userName") || "مستخدم النظام";
-  const role = localStorage.getItem("role") || "worker";
+  const { user, selectedStation: authSelectedStation, logout: authLogout } = useAuth();
+  const userName = user?.name || localStorage.getItem("userName") || "مستخدم النظام";
+  const role = user?.role || localStorage.getItem("role") || "worker";
   const today = new Date().toISOString().slice(0, 10);
   const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
   const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
@@ -66,7 +68,7 @@ function Dashboard() {
 
   const [tab, setTab] = useState("dashboard");
   const [stationsState, setStationsState] = useState({ loading: true, error: "", items: [], totalStations: 0 });
-  const [stationId, setStationId] = useState(localStorage.getItem("stationId") || "");
+  const [stationId, setStationId] = useState(authSelectedStation?._id || localStorage.getItem("stationId") || "");
   const [summary, setSummary] = useState({ loading: true, error: "", data: null });
   const [stationCustomization, setStationCustomization] = useState(null);
 
@@ -95,9 +97,16 @@ function Dashboard() {
     }
   }, [visibleTabs, tab]);
 
+  useEffect(() => {
+    if (authSelectedStation?._id) {
+      setStationId(authSelectedStation._id);
+      localStorage.setItem("stationId", authSelectedStation._id);
+    }
+  }, [authSelectedStation]);
+
   const logout = () => {
-    localStorage.clear();
-    window.location.href = "/";
+    authLogout();
+    window.location.href = "/login";
   };
 
   const loadStations = async () => {

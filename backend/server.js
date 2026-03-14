@@ -30,6 +30,7 @@ import deliveryRoutes from "./routes/deliveryRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import automationRoutes from "./routes/automationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import { ensureInitialAdminIfEmpty } from "./services/authService.js";
 
 const app = express();
 const isProd = process.env.NODE_ENV === "production";
@@ -146,6 +147,10 @@ const start = async () => {
     warnings.forEach((warning) => console.warn(`⚠️ ${warning}`));
 
     await connectDB();
+    const seedResult = await ensureInitialAdminIfEmpty();
+    if (seedResult) {
+      console.log(`🧩 Seeded initial admin: ${seedResult.email}`);
+    }
   } catch (error) {
     if (isProd) {
       console.error("❌ Failed to start in production without database connection.");

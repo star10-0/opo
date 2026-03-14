@@ -15,3 +15,5 @@ export { notificationsApi } from "./notifications";
 export { pumpsApi } from "./pumps";
 
 export { automationApi } from "./automation";
+
+export { authApi } from "./auth";
