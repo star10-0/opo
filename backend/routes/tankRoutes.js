@@ -6,11 +6,15 @@ const router = express.Router();
 
 router.post("/", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"]), async (req, res) => {
   try {
+    if (!req.body?.stationId) {
+      return res.status(400).json({ success: false, message: "stationId is required" });
+    }
+
     const tank = new StorageTank(req.body);
     await tank.save();
     res.status(201).json({ success: true, data: tank });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -25,7 +29,7 @@ router.get("/", requireAuthIfEnabled, async (req, res) => {
     const tanks = await StorageTank.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, data: tanks });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -43,7 +47,7 @@ router.put("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manager"
 
     res.json({ success: true, data: tank });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -65,7 +69,7 @@ router.delete("/:id", requireAuthIfEnabled, allowRolesIfEnabled(["admin", "manag
 
     res.json({ success: true, message: "Tank deleted" });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
