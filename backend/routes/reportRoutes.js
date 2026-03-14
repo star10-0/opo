@@ -4,6 +4,7 @@ import WorkerClosing from "../models/WorkerClosing.js";
 import DistributionVehicleSession from "../models/DistributionVehicleSession.js";
 import TankDelivery from "../models/TankDelivery.js";
 import StorageTank from "../models/StorageTank.js";
+import { enterpriseReadinessService } from "../services/enterpriseReadinessService.js";
 
 const router = express.Router();
 
@@ -294,6 +295,20 @@ router.get("/analytics/overview", async (req, res) => {
         topVarianceRows,
       },
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get("/enterprise/oversight", async (req, res) => {
+  try {
+    const data = await enterpriseReadinessService.buildOversight({
+      stationId: req.query.stationId,
+      stationIds: req.query.stationIds,
+      daysBack: req.query.daysBack,
+    });
+
+    res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
