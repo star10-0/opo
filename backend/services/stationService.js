@@ -38,7 +38,30 @@ const normalizeStationPayload = (payload = {}) => ({
   status: payload.status,
   defaultDayOpenTime: payload.defaultDayOpenTime,
   timezone: payload.timezone,
+  projectCustomization: payload.projectCustomization,
 });
+
+const mergeStationCustomization = (current = {}, nextInput = {}) => {
+  const next = nextInput || {};
+  return {
+    ...current,
+    alerts: {
+      ...(current.alerts || {}),
+      ...(next.alerts || {}),
+    },
+    workflow: {
+      ...(current.workflow || {}),
+      startTabByRole: {
+        ...((current.workflow || {}).startTabByRole || {}),
+        ...(((next.workflow || {}).startTabByRole) || {}),
+      },
+    },
+    ui: {
+      ...(current.ui || {}),
+      ...(next.ui || {}),
+    },
+  };
+};
 
 export const createStationForUser = async (payload = {}, user) => {
   const station = await Station.create(normalizeStationPayload(payload));
@@ -96,5 +119,36 @@ export const bootstrapStation = async (payload = {}, user) => {
       tanksCreated: createdTanks.length,
       pumpsCreated: createdPumps.length,
     }
+  };
+};
+
+export const getStationCustomization = async (stationId) => {
+  const station = await Station.findOne({ _id: stationId, isDeleted: false }).select("_id name code projectCustomization");
+  if (!station) {
+    throw new Error("المحطة غير موجودة");
+  }
+
+  return {
+    stationId: station._id,
+    stationName: station.name,
+    stationCode: station.code,
+    projectCustomization: station.projectCustomization || {},
+  };
+};
+
+export const updateStationCustomization = async (stationId, customInput = {}) => {
+  const station = await Station.findOne({ _id: stationId, isDeleted: false });
+  if (!station) {
+    throw new Error("المحطة غير موجودة");
+  }
+
+  station.projectCustomization = mergeStationCustomization(station.projectCustomization || {}, customInput);
+  await station.save();
+
+  return {
+    stationId: station._id,
+    stationName: station.name,
+    stationCode: station.code,
+    projectCustomization: station.projectCustomization || {},
   };
 };
