@@ -1,6 +1,7 @@
 import { enterpriseReadinessService } from "./enterpriseReadinessService.js";
 import ApprovalRequest from "../models/ApprovalRequest.js";
 import WorkerClosing from "../models/WorkerClosing.js";
+import Station from "../models/Station.js";
 
 const integrationChannels = {
   in_app: { enabled: true, mode: "native" },
@@ -86,33 +87,44 @@ export const automationService = {
     }
 
     const now = Date.now();
-    const [approvals, closings] = await Promise.all([
+    const [station, approvals, closings] = await Promise.all([
+      Station.findOne({ _id: stationId, isDeleted: false }).lean(),
       ApprovalRequest.find({ stationId, isDeleted: false, finalStatus: "pending" }).lean(),
       WorkerClosing.find({ stationId, isDeleted: false, status: "submitted" }).lean(),
     ]);
 
+    const approvalOverdueHours = Number(station?.projectCustomization?.alerts?.approvalOverdueHours || 24);
+    const closingOverdueHours = Number(station?.projectCustomization?.alerts?.closingOverdueHours || 12);
+
+    const approvalOverdueMs = approvalOverdueHours * 60 * 60 * 1000;
+    const closingOverdueMs = closingOverdueHours * 60 * 60 * 1000;
+
     const reminders = [
       ...approvals
-        .filter((row) => now - new Date(row.createdAt || row.updatedAt || now).getTime() >= 24 * 60 * 60 * 1000)
+        .filter((row) => now - new Date(row.createdAt || row.updatedAt || now).getTime() >= approvalOverdueMs)
         .map((row) => ({
-          type: "approval_pending_over_24h",
+          type: "approval_pending_over_threshold",
           priority: "high",
           referenceId: row._id,
-          message: `طلب موافقة معلق لأكثر من 24 ساعة (${row.requestType || "unknown"}).`,
+          message: `طلب موافقة معلق لأكثر من ${approvalOverdueHours} ساعة (${row.requestType || "unknown"}).`,
         })),
       ...closings
-        .filter((row) => now - new Date(row.createdAt || row.updatedAt || now).getTime() >= 12 * 60 * 60 * 1000)
+        .filter((row) => now - new Date(row.createdAt || row.updatedAt || now).getTime() >= closingOverdueMs)
         .map((row) => ({
-          type: "closing_pending_over_12h",
+          type: "closing_pending_over_threshold",
           priority: "medium",
           referenceId: row._id,
-          message: "إغلاق عامل مرسل للمراجعة منذ أكثر من 12 ساعة.",
+          message: `إغلاق عامل مرسل للمراجعة منذ أكثر من ${closingOverdueHours} ساعة.`,
         })),
     ];
 
     return {
       stationId,
       generatedAt: new Date().toISOString(),
+      thresholds: {
+        approvalOverdueHours,
+        closingOverdueHours,
+      },
       reminders,
       totals: {
         pendingApprovals: approvals.length,
