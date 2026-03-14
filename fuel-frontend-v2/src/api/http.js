@@ -23,8 +23,10 @@ http.interceptors.response.use(
       localStorage.removeItem("role");
       localStorage.removeItem("userName");
       localStorage.removeItem("userId");
-      if (window.location.pathname !== "/") {
-        window.location.href = "/";
+      localStorage.removeItem("selectedStation");
+      localStorage.removeItem("stationId");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);

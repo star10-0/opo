@@ -6,6 +6,11 @@ const StationSchema = new mongoose.Schema(
     code: { type: String, required: true, trim: true, unique: true },
     address: { type: String, trim: true },
     phone: { type: String, trim: true },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      default: null,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "maintenance"],
