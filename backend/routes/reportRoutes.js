@@ -108,7 +108,7 @@ router.get("/daily", async (req, res) => {
     const rows = await WorkerClosing.find({ ...filters, createdAt: { $gte: start, $lte: end } }).sort({ createdAt: -1 });
     res.json({ success: true, data: { period: { start, end }, totals: sumClosings(rows), items: rows } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -123,7 +123,7 @@ router.get("/weekly", async (req, res) => {
     const previousRows = await WorkerClosing.find({ ...filters, createdAt: { $gte: prevStart, $lte: prevEnd } });
     res.json({ success: true, data: { period: { start, end }, totals: sumClosings(currentRows), comparisons: comparePeriods(currentRows, previousRows), items: currentRows } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -138,7 +138,7 @@ router.get("/monthly", async (req, res) => {
     const previousRows = await WorkerClosing.find({ ...filters, createdAt: { $gte: prevStart, $lte: prevEnd } });
     res.json({ success: true, data: { period: { start, end }, totals: sumClosings(currentRows), comparisons: comparePeriods(currentRows, previousRows), items: currentRows } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -149,7 +149,7 @@ router.get("/variances", async (req, res) => {
     const rows = await WorkerClosing.find({ ...filters, createdAt: { $gte: start, $lte: end }, variance: { $ne: 0 } }).sort({ createdAt: -1 });
     res.json({ success: true, data: { period: { start, end }, totals: sumClosings(rows), items: rows } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -168,7 +168,7 @@ router.get("/distribution-vehicle", async (req, res) => {
     }, { totalAmount: 0, totalLiters: 0 });
     res.json({ success: true, data: { period: { start, end }, totals, items: rows } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -220,7 +220,7 @@ router.get("/deliveries-tanks", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -296,7 +296,7 @@ router.get("/analytics/overview", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -310,7 +310,7 @@ router.get("/enterprise/oversight", async (req, res) => {
 
     res.json({ success: true, data });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
@@ -379,7 +379,7 @@ router.get("/export/csv", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename=${reportType}-report.csv`);
     res.send(`\uFEFF${csv}`);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "حدث خطأ داخلي غير متوقع" });
   }
 });
 
