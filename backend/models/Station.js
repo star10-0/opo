@@ -13,6 +13,25 @@ const StationSchema = new mongoose.Schema(
     },
     defaultDayOpenTime: { type: String, default: "06:00" },
     timezone: { type: String, default: "Asia/Baghdad" },
+    projectCustomization: {
+      alerts: {
+        approvalOverdueHours: { type: Number, default: 24, min: 1, max: 168 },
+        closingOverdueHours: { type: Number, default: 12, min: 1, max: 72 },
+        staleOperationalDayHours: { type: Number, default: 18, min: 6, max: 72 },
+        highVarianceRatePct: { type: Number, default: 2, min: 0.5, max: 20 },
+      },
+      workflow: {
+        startTabByRole: {
+          admin: { type: String, default: "dashboard" },
+          manager: { type: String, default: "operational-day" },
+          accountant: { type: String, default: "worker-closing" },
+          worker: { type: String, default: "pump-assignments" },
+        },
+      },
+      ui: {
+        dashboardCompactCards: { type: Boolean, default: true },
+      },
+    },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }

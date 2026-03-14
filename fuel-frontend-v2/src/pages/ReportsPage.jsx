@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { reportsApi, automationApi } from "../api";
+import { reportsApi, automationApi, stationApi } from "../api";
 import { EmptyState, ErrorState, LoadingState, SuccessState } from "../components/Feedback";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
@@ -49,6 +49,8 @@ function ReportsPage({ stationId }) {
       reportsApi.analyticsOverview(normalizedQuery),
       reportsApi.enterpriseOversight({ ...normalizedQuery, daysBack: 7 }),
       automationApi.integrationCatalog(),
+      filters.stationId === "__all__" ? Promise.resolve(null) : automationApi.pendingReviewReminders({ stationId: filters.stationId }),
+      filters.stationId === "__all__" ? Promise.resolve(null) : stationApi.customization(filters.stationId),
     ]);
 
     setState({
@@ -65,6 +67,8 @@ function ReportsPage({ stationId }) {
         analytics: requests[6].status === "fulfilled" ? requests[6].value : null,
         enterprise: requests[7].status === "fulfilled" ? requests[7].value : null,
         integrationCatalog: requests[8].status === "fulfilled" ? requests[8].value : null,
+        pendingReviewReminders: requests[9].status === "fulfilled" ? requests[9].value : null,
+        customization: requests[10].status === "fulfilled" ? requests[10].value : null,
       },
     });
   };
@@ -103,7 +107,7 @@ function ReportsPage({ stationId }) {
   };
 
   if (state.loading) return <LoadingState />;
-  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks, analytics, enterprise, integrationCatalog } = state.data;
+  const { daily, weekly, monthly, variances, vehicle, deliveriesTanks, analytics, enterprise, integrationCatalog, pendingReviewReminders, customization } = state.data;
 
   return (
     <div>
@@ -154,6 +158,20 @@ function ReportsPage({ stationId }) {
         <section style={card}>
           <strong>جاهزية التكاملات المؤسسية</strong>
           <pre style={pre}>{JSON.stringify(integrationCatalog, null, 2)}</pre>
+        </section>
+      ) : null}
+
+      {pendingReviewReminders ? (
+        <section style={card}>
+          <strong>تنبيهات تشغيلية مخصصة للمحطة</strong>
+          <pre style={pre}>{JSON.stringify({ thresholds: pendingReviewReminders.thresholds, totals: pendingReviewReminders.totals, reminders: pendingReviewReminders.reminders?.slice(0, 10) }, null, 2)}</pre>
+        </section>
+      ) : null}
+
+      {customization ? (
+        <section style={card}>
+          <strong>إعدادات التخصيص المعتمدة</strong>
+          <pre style={pre}>{JSON.stringify(customization.projectCustomization || {}, null, 2)}</pre>
         </section>
       ) : null}
 

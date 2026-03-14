@@ -68,6 +68,7 @@ function Dashboard() {
   const [stationsState, setStationsState] = useState({ loading: true, error: "", items: [], totalStations: 0 });
   const [stationId, setStationId] = useState(localStorage.getItem("stationId") || "");
   const [summary, setSummary] = useState({ loading: true, error: "", data: null });
+  const [stationCustomization, setStationCustomization] = useState(null);
 
   const selectedStation = useMemo(() => stationsState.items.find((s) => s._id === stationId) || null, [stationsState.items, stationId]);
   const [createState, setCreateState] = useState({
@@ -155,12 +156,22 @@ function Dashboard() {
       stationId === "__all__" ? Promise.resolve([]) : deliveriesApi.list({ stationId, limit: 5 }),
       stationId === "__all__" ? Promise.resolve([]) : workerClosingsApi.list({ stationId, status: "suspended" }),
       stationId === "__all__" ? Promise.resolve([]) : approvalsApi.list({ stationId, finalStatus: "pending" }),
+      stationId === "__all__" ? Promise.resolve(null) : stationApi.customization(stationId),
     ]).then((results) => {
       const errors = results.filter((r) => r.status === "rejected");
       const data = results.map((r) => (r.status === "fulfilled" ? r.value : null));
+      setStationCustomization(data[13]);
       setSummary({ loading: false, error: errors.length ? "بعض مؤشرات لوحة التحكم غير متاحة حاليًا." : "", data });
     });
   }, [stationId, stationsState.items]);
+
+  useEffect(() => {
+    if (!stationId || stationId === "__all__" || !stationCustomization?.projectCustomization?.workflow?.startTabByRole) return;
+    const preferredTab = stationCustomization.projectCustomization.workflow.startTabByRole[role];
+    if (preferredTab && visibleTabs.some((x) => x.key === preferredTab) && tab === "dashboard") {
+      setTab(preferredTab);
+    }
+  }, [stationId, stationCustomization, role, visibleTabs, tab]);
 
   const roleHint = useMemo(() => {
     if (role === "worker") return "ابدأ من استلامات المضخات ثم أرسل إغلاقك للمحاسب.";
@@ -175,7 +186,7 @@ function Dashboard() {
     if (summary.error && !summary.data) return <ErrorState error={summary.error} />;
     if (!summary.data) return <EmptyState text={t("noData")} />;
 
-    const [daily, weekly, monthly, variances, vehicle, tankDelivery, analytics, enterprise, automationPreview, tanks, deliveries, suspended, approvals] = summary.data;
+    const [daily, weekly, monthly, variances, vehicle, tankDelivery, analytics, enterprise, automationPreview, tanks, deliveries, suspended, approvals, customization] = summary.data;
     return (
       <div>
         <section style={onboardingCard}>
@@ -203,6 +214,8 @@ function Dashboard() {
           <Card title="آخر الصهاريج" value={Array.isArray(deliveries) ? deliveries.length : deliveries?.items?.length ?? "--"} />
           <Card title="محطات عالية المخاطر" value={enterprise?.summary?.highRiskStations ?? "--"} />
           <Card title="تنبيهات جاهزة للأتمتة" value={automationPreview?.reminderQueue?.length ?? "--"} />
+          <Card title="حد تأخير الموافقات (ساعة)" value={customization?.projectCustomization?.alerts?.approvalOverdueHours ?? 24} />
+          <Card title="حد تأخير إغلاق العامل (ساعة)" value={customization?.projectCustomization?.alerts?.closingOverdueHours ?? 12} />
         </div>
 
         {enterprise?.stations?.length ? (
