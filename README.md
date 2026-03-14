@@ -93,7 +93,7 @@ npm run healthcheck
 ## متغيرات البيئة المطلوبة
 راجع `.env.example`، وأهم المتغيرات:
 - Backend: `PORT`, `NODE_ENV`, `MONGO_URI`, `JWT_SECRET`, `FRONTEND_URL`, `ENFORCE_AUTH`
-- Frontend: `VITE_API_BASE_URL`, `VITE_API_TIMEOUT_MS`
+- Frontend: `VITE_API_BASE_URL`, `VITE_API_TIMEOUT_MS`, `VITE_ENABLE_DEMO_LOGIN` (يجب أن تبقى `false` افتراضيًا)
 
 ## تشغيل الإنتاج (مرجعي)
 ### Backend

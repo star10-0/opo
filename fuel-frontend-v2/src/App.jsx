@@ -2,9 +2,30 @@
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 
-function PrivateRoute({ children }) {
+function hasValidSessionToken() {
   const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/" replace />;
+  if (!token) return false;
+
+  const demoLoginEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
+  if (token === "demo-token") {
+    return demoLoginEnabled;
+  }
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+
+  try {
+    const payload = JSON.parse(atob(parts[1]));
+    const exp = Number(payload?.exp || 0);
+    if (!Number.isFinite(exp) || exp <= 0) return true;
+    return exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function PrivateRoute({ children }) {
+  return hasValidSessionToken() ? children : <Navigate to="/" replace />;
 }
 
 function App() {
