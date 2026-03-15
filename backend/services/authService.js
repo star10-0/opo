@@ -1,14 +1,20 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import Station from "../models/Station.js";
+import Organization from "../models/Organization.js";
 
 const ACCOUNT_TYPES = ["individual", "company"];
 const ROLES = ["admin", "accountant", "worker", "manager"];
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
-const buildError = (message, statusCode = 400) => {
+const buildError = (message, statusCode = 400, details = null) => {
   const error = new Error(message);
   error.statusCode = statusCode;
+  if (details) {
+    error.details = details;
+  }
   return error;
 };
 
@@ -21,13 +27,23 @@ const normalizeAccountType = (value) => {
 
 const normalizeRole = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
-  return ROLES.includes(normalized) ? normalized : "worker";
+  return ROLES.includes(normalized) ? normalized : "admin";
 };
 
 const ensureJwtSecret = () => {
   if (!process.env.JWT_SECRET) {
     throw buildError("خدمة تسجيل الدخول غير متاحة حاليًا", 503);
   }
+};
+
+const buildUniqueCode = async (Model, prefix, session) => {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const candidate = `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const exists = await Model.findOne({ code: candidate }).session(session).select("_id");
+    if (!exists) return candidate;
+  }
+
+  throw buildError("تعذر إنشاء رمز فريد للحساب، يرجى المحاولة مرة أخرى", 500);
 };
 
 const serializeStation = (station) => {
@@ -118,69 +134,148 @@ const validateLoginPayload = (payload = {}) => {
 };
 
 const validateRegisterPayload = (payload = {}) => {
+  const fieldErrors = {};
+
   const name = String(payload.name || "").trim();
   const email = normalizeEmail(payload.email);
   const password = String(payload.password || "");
+  const confirmPassword = String(payload.confirmPassword || "");
   const role = normalizeRole(payload.role);
   const accountType = normalizeAccountType(payload.accountType);
+  const stationName = String(payload.stationName || "").trim();
+  const organizationName = String(payload.organizationName || "").trim();
 
-  if (!name || !email || !password || !accountType) {
-    throw buildError("يرجى تعبئة جميع الحقول المطلوبة", 400);
+  if (!name) {
+    fieldErrors.name = "الاسم مطلوب";
+  } else if (name.length < 3) {
+    fieldErrors.name = "الاسم يجب أن يكون 3 أحرف على الأقل";
   }
 
-  if (password.length < 8) {
-    throw buildError("كلمة المرور يجب أن تكون 8 أحرف على الأقل", 400);
+  if (!email) {
+    fieldErrors.email = "البريد الإلكتروني مطلوب";
+  } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+    fieldErrors.email = "يرجى إدخال بريد إلكتروني صحيح";
   }
 
-  if (accountType === "individual" && !payload.station) {
-    throw buildError("يجب تحديد المحطة في حساب المحطة الفردية", 400);
+  if (!password) {
+    fieldErrors.password = "كلمة المرور مطلوبة";
+  } else if (!PASSWORD_REGEX.test(password)) {
+    fieldErrors.password = "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي حرفًا كبيرًا ورقمًا";
   }
 
-  return { name, email, password, role, accountType };
+  if (!confirmPassword) {
+    fieldErrors.confirmPassword = "تأكيد كلمة المرور مطلوب";
+  } else if (confirmPassword !== password) {
+    fieldErrors.confirmPassword = "تأكيد كلمة المرور غير مطابق";
+  }
+
+  if (!accountType) {
+    fieldErrors.accountType = "نوع الحساب يجب أن يكون محطة فردية أو مؤسسة";
+  }
+
+  if (accountType === "individual" && !stationName) {
+    fieldErrors.stationName = "اسم المحطة مطلوب للحساب الفردي";
+  }
+
+  if (accountType === "company" && !organizationName) {
+    fieldErrors.organizationName = "اسم المؤسسة مطلوب لحساب المؤسسة";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    throw buildError("يرجى تصحيح بيانات التسجيل", 400, fieldErrors);
+  }
+
+  return {
+    name,
+    email,
+    password,
+    role,
+    accountType,
+    stationName,
+    organizationName,
+  };
 };
 
 const invalidCredentialsError = () => buildError("بيانات تسجيل الدخول غير صحيحة", 401);
 
 export const registerUser = async (payload = {}) => {
   ensureJwtSecret();
-  const { name, email, password, role, accountType } = validateRegisterPayload(payload);
+  const { name, email, password, role, accountType, stationName, organizationName } = validateRegisterPayload(payload);
 
-  const exists = await User.findOne({ email }).select("_id");
-  if (exists) {
-    throw buildError("يوجد مستخدم مسجل بهذا البريد الإلكتروني بالفعل", 409);
+  const existingUser = await User.findOne({ email }).select("_id");
+  if (existingUser) {
+    throw buildError("هذا البريد مستخدم بالفعل", 409, { email: "هذا البريد مستخدم بالفعل" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const session = await mongoose.startSession();
 
-  const doc = {
-    name,
-    email,
-    password: hashedPassword,
-    role,
-    accountType,
-    organization: payload.organization || null,
-    station: payload.station || null,
-    allowedStations: Array.isArray(payload.allowedStations) ? payload.allowedStations : [],
-    stationAccess: Array.isArray(payload.stationAccess) ? payload.stationAccess : [],
-    permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
-    isActive: payload.isActive ?? true,
-  };
+  try {
+    session.startTransaction();
 
-  if (accountType === "individual" && doc.station) {
-    doc.allowedStations = [doc.station];
-    doc.stationAccess = [doc.station];
-    doc.currentStation = doc.station;
+    let organizationId = null;
+    let stationId = null;
+
+    if (accountType === "company") {
+      const organization = await Organization.create([
+        {
+          name: organizationName,
+          code: await buildUniqueCode(Organization, "ORG", session),
+          isActive: true,
+          isDeleted: false,
+        },
+      ], { session });
+      organizationId = organization[0]._id;
+    }
+
+    if (accountType === "individual") {
+      const station = await Station.create([
+        {
+          name: stationName,
+          code: await buildUniqueCode(Station, "STN", session),
+          status: "active",
+          isDeleted: false,
+        },
+      ], { session });
+      stationId = station[0]._id;
+    }
+
+    const userRole = role || "admin";
+    const userDoc = {
+      name,
+      email,
+      password: hashedPassword,
+      role: userRole,
+      accountType,
+      organization: organizationId,
+      station: stationId,
+      allowedStations: stationId ? [stationId] : [],
+      stationAccess: stationId ? [stationId] : [],
+      permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+      isActive: payload.isActive ?? true,
+      currentStation: stationId,
+    };
+
+    const createdUsers = await User.create([userDoc], { session });
+
+    await session.commitTransaction();
+    const user = createdUsers[0];
+    return createAuthResponse(user);
+  } catch (error) {
+    await session.abortTransaction();
+
+    if (error?.code === 11000 && error?.keyPattern?.email) {
+      throw buildError("هذا البريد مستخدم بالفعل", 409, { email: "هذا البريد مستخدم بالفعل" });
+    }
+
+    if (error.statusCode) {
+      throw error;
+    }
+
+    throw buildError("تعذر إنشاء الحساب حاليًا، يرجى المحاولة مرة أخرى", 500);
+  } finally {
+    session.endSession();
   }
-
-  if (accountType === "company") {
-    const stations = [...new Set([...(doc.allowedStations || []), ...(doc.stationAccess || [])].map((id) => String(id)))];
-    doc.allowedStations = stations;
-    doc.stationAccess = stations;
-    doc.currentStation = payload.currentStation || stations[0] || null;
-  }
-
-  const user = await User.create(doc);
-  return createAuthResponse(user);
 };
 
 export const loginUser = async (payload = {}) => {

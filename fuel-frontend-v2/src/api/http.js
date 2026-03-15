@@ -50,7 +50,12 @@ const normalizeError = (error) => {
     (error?.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالخادم" : "") ||
     error?.message ||
     "حدث خطأ غير متوقع أثناء الاتصال بالخادم";
-  return new Error(message);
+
+  const normalized = new Error(message);
+  if (error?.response?.data?.details && typeof error.response.data.details === "object") {
+    normalized.fieldErrors = error.response.data.details;
+  }
+  return normalized;
 };
 
 export async function apiGet(url, config) {

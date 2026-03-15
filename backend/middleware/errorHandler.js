@@ -21,6 +21,7 @@ export const errorHandler = (err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message: isProd ? safeMessage : err.message || "Server Error",
+    ...(err.details ? { details: err.details } : {}),
     ...(isProd ? {} : { stack: err.stack }),
   });
 };
