@@ -32,6 +32,9 @@ const run = async () => {
         role: "admin",
         isActive: true,
         password: passwordHash,
+        accountType: "company",
+        allowedStations: [],
+        stationAccess: [],
       },
       $setOnInsert: {
         permissions: ["view_all_stations", "manage_users", "manage_stations", "view_reports", "view_dashboard"],

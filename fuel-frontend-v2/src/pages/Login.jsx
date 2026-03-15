@@ -1,94 +1,102 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../services/api";
-import { useLanguage } from "../i18n/LanguageContext";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "./auth.css";
+
+const accountTypeLabel = {
+  individual: "محطة فردية",
+  company: "مؤسسة متعددة المحطات",
+};
 
 function Login() {
   const navigate = useNavigate();
-  const { language, setLanguage, t } = useLanguage();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const { login, accountType, setAccountType, isAuthenticated, remembered } = useAuth();
+  const [form, setForm] = useState({
+    email: remembered.email || "",
+    password: "",
+    rememberMe: remembered.enabled,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const type = accountType || remembered.accountType;
 
-  const demoLoginEnabled = import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
-
-  const fillDemo = (role) => {
-    if (!demoLoginEnabled) return;
-    localStorage.setItem("token", "demo-token");
-    localStorage.setItem("role", role);
-    navigate("/dashboard");
-  };
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (!type) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await API.post("/auth/login", form);
-      const payload = res?.data?.data;
-      localStorage.setItem("token", payload?.token || "");
-      localStorage.setItem("role", payload?.user?.role || "");
-      localStorage.setItem("userName", payload?.user?.name || "");
-      localStorage.setItem("userId", payload?.user?._id || "");
-      navigate("/dashboard");
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status === 404) {
-        setError(t("loginNotFound"));
-      } else if (status === 401) {
-        setError(t("loginUnauthorized"));
-      } else if (status >= 500) {
-        setError(t("loginServerError"));
+      const payload = await login({
+        email: form.email,
+        password: form.password,
+        accountType: type,
+        rememberMe: form.rememberMe,
+      });
+
+      const stations = payload?.availableStations || [];
+      const selected = payload?.selectedStation;
+      if (payload?.accountType === "company" && stations.length > 1 && !selected) {
+        navigate("/select-station");
       } else {
-        setError(err?.response?.data?.message || err.message || t("loginFailed"));
+        navigate("/dashboard");
       }
+    } catch (err) {
+      setError(err?.message || "تعذر تسجيل الدخول، حاول مرة أخرى.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={wrapper}>
-      <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <h1 style={{ marginTop: 0 }}>{t("loginTitle")}</h1>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="ar">{t("arabic")}</option>
-            <option value="en">{t("english")}</option>
-          </select>
-        </div>
-        <p style={{ color: "#6b7280" }}>{t("loginSubtitle")}</p>
+    <main className="auth-shell" dir="rtl">
+      <section className="auth-card">
+        <h1 className="auth-title">تسجيل الدخول</h1>
+        <p className="auth-subtitle">أدخل بريدك وكلمة المرور للمتابعة.</p>
 
-        <form onSubmit={handleSubmit}>
-          <input type="email" name="email" placeholder={t("email")} value={form.email} onChange={handleChange} style={input} required />
-          <input type="password" name="password" placeholder={t("password")} value={form.password} onChange={handleChange} style={input} required />
-          {error ? <div style={errorBox}>{error}</div> : null}
-          <button type="submit" style={primaryBtn} disabled={loading}>{loading ? t("loggingIn") : t("login")}</button>
+        <div className="account-type-switch" role="group" aria-label="اختيار نوع الحساب">
+          <button
+            type="button"
+            className={`account-type-chip ${type === "individual" ? "active" : ""}`}
+            onClick={() => setAccountType("individual")}
+          >
+            {accountTypeLabel.individual}
+          </button>
+          <button
+            type="button"
+            className={`account-type-chip ${type === "company" ? "active" : ""}`}
+            onClick={() => setAccountType("company")}
+          >
+            {accountTypeLabel.company}
+          </button>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label>البريد الإلكتروني</label>
+          <input type="email" required value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} />
+
+          <label>كلمة المرور</label>
+          <input type="password" required value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} />
+
+          <label className="remember-row">
+            <input type="checkbox" checked={form.rememberMe} onChange={(e) => setForm((s) => ({ ...s, rememberMe: e.target.checked }))} />
+            <span>تذكرني</span>
+          </label>
+
+          {error ? <div className="auth-error">{error}</div> : null}
+
+          <button type="submit" className="auth-btn" disabled={loading}>{loading ? "جارٍ تسجيل الدخول..." : "دخول"}</button>
         </form>
 
-        {demoLoginEnabled ? (
-          <>
-            <hr style={{ margin: "20px 0" }} />
-            <p style={{ color: "#6b7280", marginBottom: 10 }}>{t("demoAccess")}</p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button onClick={() => fillDemo("admin")} style={secondaryBtn}>{t("adminDemo")}</button>
-              <button onClick={() => fillDemo("accountant")} style={secondaryBtn}>{t("accountantDemo")}</button>
-              <button onClick={() => fillDemo("worker")} style={secondaryBtn}>{t("workerDemo")}</button>
-            </div>
-          </>
-        ) : null}
-      </div>
-    </div>
+        <div className="auth-footer">
+          <Link to="/">الرجوع لاختيار نوع الحساب</Link>
+        </div>
+      </section>
+    </main>
   );
 }
-
-const wrapper = { minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", padding: 24 };
-const card = { width: 420, background: "#fff", padding: 24, borderRadius: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.08)" };
-const input = { width: "100%", padding: "12px", marginBottom: "12px", border: "1px solid #d1d5db", borderRadius: "10px" };
-const primaryBtn = { width: "100%", padding: "12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer" };
-const secondaryBtn = { padding: "10px 14px", background: "#e5e7eb", color: "#111827", border: "none", borderRadius: "10px", cursor: "pointer" };
-const errorBox = { background: "#fee2e2", color: "#991b1b", padding: "10px", borderRadius: "10px", marginBottom: "12px" };
 
 export default Login;
