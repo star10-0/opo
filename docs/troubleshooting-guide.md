@@ -131,3 +131,16 @@
    cd backend && node --check services/authService.js
    cd ../fuel-frontend-v2 && npm run build
    ```
+
+
+### ملاحظة مهمة لحل تعارض GitHub في نفس الفرع
+إذا ظهر في GitHub أن هذا الفرع لا يمكن دمجه تلقائيًا:
+1. اسحب آخر تحديث من الفرع الهدف محليًا ثم ادمجه داخل فرعك (أو rebase) قبل فتح PR النهائي.
+2. عند تعارض ملفات مولدة أو dependencies لا تجعلها مرجعًا للحسم (مثل `node_modules`).
+3. بعد حل التعارض محليًا:
+   ```bash
+   git add .
+   git commit -m "chore: resolve merge conflicts with target branch"
+   git push
+   ```
+4. تحقّق أن PR أصبح **Able to merge** في GitHub.
