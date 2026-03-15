@@ -74,7 +74,8 @@ function Login() {
           <button type="submit" className="auth-btn" disabled={loading}>{loading ? "جارٍ تسجيل الدخول..." : "دخول"}</button>
         </form>
 
-        <div className="auth-footer">
+        <div className="auth-footer auth-footer-stack">
+          <Link to="/register">إنشاء حساب جديد</Link>
           <Link to="/" onClick={() => setAccountType("")}>الرجوع لاختيار نوع الحساب</Link>
         </div>
       </section>
