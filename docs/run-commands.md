@@ -20,6 +20,13 @@ cd backend
 npm run healthcheck
 ```
 
+
+## Backend auth demo users bootstrap
+```bash
+cd backend
+JWT_SECRET=replace-me npm run bootstrap:auth-demo-users
+```
+
 ## Frontend (Development)
 ```bash
 cd fuel-frontend-v2

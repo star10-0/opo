@@ -45,7 +45,8 @@ function Login() {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.message || "تعذر تسجيل الدخول، حاول مرة أخرى.");
+      const status = Number(err?.statusCode || 0);
+      setError(status >= 500 ? "حدث خطأ داخلي، حاول لاحقًا" : (err?.message || "تعذر تسجيل الدخول"));
     } finally {
       setLoading(false);
     }

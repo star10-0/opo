@@ -4,6 +4,8 @@ const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.PROD ? "/api" : "http://localhost:5000/api");
 
+const isDev = import.meta.env.DEV;
+
 const http = axios.create({
   baseURL: apiBaseUrl,
   timeout: Number(import.meta.env.VITE_API_TIMEOUT_MS || 10000),
@@ -25,6 +27,7 @@ http.interceptors.response.use(
       localStorage.removeItem("userId");
       localStorage.removeItem("selectedStation");
       localStorage.removeItem("stationId");
+      localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
@@ -45,16 +48,31 @@ const unwrap = (response) => {
 };
 
 const normalizeError = (error) => {
+  if (isDev && error?.response?.data) {
+    console.warn("[auth/http] request failed", {
+      status: error?.response?.status,
+      data: error.response.data,
+      url: error?.config?.url,
+      method: error?.config?.method,
+    });
+  }
+
+  const status = Number(error?.response?.status || 0);
+  const serverMessage = error?.response?.data?.message;
   const message =
-    error?.response?.data?.message ||
+    (status >= 400 && status < 500 && serverMessage) ||
     (error?.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالخادم" : "") ||
+    serverMessage ||
     error?.message ||
     "حدث خطأ غير متوقع أثناء الاتصال بالخادم";
 
   const normalized = new Error(message);
+  normalized.statusCode = status;
+
   if (error?.response?.data?.details && typeof error.response.data.details === "object") {
     normalized.fieldErrors = error.response.data.details;
   }
+
   return normalized;
 };
 

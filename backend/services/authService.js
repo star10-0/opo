@@ -36,6 +36,11 @@ const ensureJwtSecret = () => {
   }
 };
 
+const logAuthDebug = (scope, payload = {}) => {
+  if (process.env.NODE_ENV === "production") return;
+  console.warn(`[AUTH:${scope}]`, payload);
+};
+
 const buildUniqueCode = async (Model, prefix, session) => {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     const candidate = `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -196,7 +201,7 @@ const validateRegisterPayload = (payload = {}) => {
   };
 };
 
-const invalidCredentialsError = () => buildError("بيانات تسجيل الدخول غير صحيحة", 401);
+const invalidCredentialsError = () => buildError("البريد الإلكتروني أو كلمة المرور غير صحيحة", 401);
 
 export const registerUser = async (payload = {}) => {
   ensureJwtSecret();
@@ -204,6 +209,7 @@ export const registerUser = async (payload = {}) => {
 
   const existingUser = await User.findOne({ email }).select("_id");
   if (existingUser) {
+    logAuthDebug("register_failed_existing_email", { email });
     throw buildError("هذا البريد مستخدم بالفعل", 409, { email: "هذا البريد مستخدم بالفعل" });
   }
 
@@ -265,13 +271,20 @@ export const registerUser = async (payload = {}) => {
     await session.abortTransaction();
 
     if (error?.code === 11000 && error?.keyPattern?.email) {
+      logAuthDebug("register_failed_duplicate_index", { email });
       throw buildError("هذا البريد مستخدم بالفعل", 409, { email: "هذا البريد مستخدم بالفعل" });
     }
 
     if (error.statusCode) {
+      logAuthDebug("register_failed_validation", {
+        email,
+        statusCode: error.statusCode,
+        message: error.message,
+      });
       throw error;
     }
 
+    logAuthDebug("register_failed_unexpected", { email, message: error.message });
     throw buildError("تعذر إنشاء الحساب حاليًا، يرجى المحاولة مرة أخرى", 500);
   } finally {
     session.endSession();
@@ -285,15 +298,18 @@ export const loginUser = async (payload = {}) => {
   const user = await User.findOne({ email }).select("_id name email password role permissions stationAccess allowedStations accountType station organization currentStation isActive");
 
   if (!user || !user.isActive) {
+    logAuthDebug("login_failed_user_not_found_or_inactive", { email });
     throw invalidCredentialsError();
   }
 
   if (accountType && user.accountType !== accountType) {
-    throw buildError("نوع الحساب المحدد لا يطابق بيانات المستخدم", 401);
+    logAuthDebug("login_failed_account_type_mismatch", { email, expected: user.accountType, received: accountType });
+    throw invalidCredentialsError();
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
+    logAuthDebug("login_failed_password_mismatch", { email });
     throw invalidCredentialsError();
   }
 
@@ -304,6 +320,7 @@ export const loginUser = async (payload = {}) => {
   await user.save();
 
   await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+  logAuthDebug("login_success", { userId: String(user._id), email: user.email, accountType: user.accountType });
   return createAuthResponse(user);
 };
 
@@ -348,26 +365,43 @@ export const ensureInitialAdminIfEmpty = async () => {
   const usersCount = await User.countDocuments({});
   if (usersCount > 0) return null;
 
-  const email = normalizeEmail(process.env.SEED_ADMIN_EMAIL || "admin@fuel.local");
-  const password = String(process.env.SEED_ADMIN_PASSWORD || "Admin@12345");
-  const name = String(process.env.SEED_ADMIN_NAME || "System Admin").trim();
+  const defaultSeeds = [
+    {
+      name: "مدير المحطة",
+      email: normalizeEmail(process.env.SEED_STATION_ADMIN_EMAIL || "admin@station.local"),
+      password: String(process.env.SEED_STATION_ADMIN_PASSWORD || "Admin@12345"),
+      accountType: "individual",
+      stationName: String(process.env.SEED_STATION_NAME || "محطة النور"),
+      role: "admin",
+    },
+    {
+      name: "مدير المؤسسة",
+      email: normalizeEmail(process.env.SEED_COMPANY_ADMIN_EMAIL || "owner@company.local"),
+      password: String(process.env.SEED_COMPANY_ADMIN_PASSWORD || "Company@12345"),
+      accountType: "company",
+      organizationName: String(process.env.SEED_ORGANIZATION_NAME || "مؤسسة الوقود المتحدة"),
+      role: "admin",
+    },
+  ];
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const admin = await User.create({
-    name,
-    email,
-    password: passwordHash,
-    role: "admin",
-    accountType: "company",
-    permissions: ["view_all_stations", "manage_users", "manage_stations", "view_reports", "view_dashboard"],
-    stationAccess: [],
-    allowedStations: [],
-    isActive: true,
-  });
+  const seeded = [];
 
-  return {
-    email,
-    password,
-    userId: admin._id,
-  };
+  for (const seed of defaultSeeds) {
+    const result = await registerUser({
+      ...seed,
+      confirmPassword: seed.password,
+      isActive: true,
+      permissions: ["view_all_stations", "manage_users", "manage_stations", "view_reports", "view_dashboard"],
+    });
+
+    seeded.push({
+      email: seed.email,
+      password: seed.password,
+      accountType: seed.accountType,
+      selectedStation: result.selectedStation,
+      userId: result.user?._id,
+    });
+  }
+
+  return seeded;
 };
