@@ -149,7 +149,8 @@ const start = async () => {
     await connectDB();
     const seedResult = await ensureInitialAdminIfEmpty();
     if (seedResult) {
-      console.log(`🧩 Seeded initial admin: ${seedResult.email}`);
+      console.log("🧩 Seeded default auth accounts:");
+      console.log(seedResult.map((item) => ({ email: item.email, accountType: item.accountType, userId: item.userId })));
     }
   } catch (error) {
     if (isProd) {

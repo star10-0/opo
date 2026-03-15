@@ -18,6 +18,18 @@ const STORAGE_KEYS = {
   stationId: "stationId",
 };
 
+function readJsonStorage(key, fallback = null) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 function clearSessionStorage() {
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.user);
@@ -28,22 +40,37 @@ function clearSessionStorage() {
   localStorage.removeItem(STORAGE_KEYS.userId);
 }
 
+function migrateLegacyStorage() {
+  const legacyKeys = ["auth", "authUser", "authToken", "sessionUser", "currentUser"];
+  legacyKeys.forEach((key) => localStorage.removeItem(key));
+
+  const rawUser = localStorage.getItem(STORAGE_KEYS.user);
+  if (rawUser && rawUser === "undefined") {
+    localStorage.removeItem(STORAGE_KEYS.user);
+  }
+
+  const rawSelectedStation = localStorage.getItem(STORAGE_KEYS.selectedStation);
+  if (rawSelectedStation && rawSelectedStation === "undefined") {
+    localStorage.removeItem(STORAGE_KEYS.selectedStation);
+  }
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem(STORAGE_KEYS.token) || "");
-  const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem(STORAGE_KEYS.user);
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [user, setUser] = useState(() => readJsonStorage(STORAGE_KEYS.user));
   const [accountType, setAccountType] = useState(localStorage.getItem(STORAGE_KEYS.accountType) || "");
-  const [selectedStation, setSelectedStation] = useState(() => {
-    const raw = localStorage.getItem(STORAGE_KEYS.selectedStation);
-    return raw ? JSON.parse(raw) : null;
-  });
+  const [selectedStation, setSelectedStation] = useState(() => readJsonStorage(STORAGE_KEYS.selectedStation));
   const [availableStations, setAvailableStations] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    migrateLegacyStorage();
+  }, []);
+
   const applyAuthData = useCallback((payload, { rememberMe = false, rememberedEmail = "", rememberedAccountType = "" } = {}) => {
-    const nextToken = payload?.token || token;
+    clearSessionStorage();
+
+    const nextToken = payload?.token || "";
     const nextUser = payload?.user || null;
     const nextAccountType = payload?.accountType || nextUser?.accountType || "";
     const nextSelected = payload?.selectedStation || null;
@@ -51,6 +78,8 @@ export function AuthProvider({ children }) {
     if (nextToken) {
       localStorage.setItem(STORAGE_KEYS.token, nextToken);
       setToken(nextToken);
+    } else {
+      setToken("");
     }
 
     setUser(nextUser);
@@ -78,7 +107,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem(STORAGE_KEYS.rememberedEmail, rememberedEmail || nextUser?.email || "");
       localStorage.setItem(STORAGE_KEYS.rememberedAccountType, rememberedAccountType || nextAccountType || "");
     }
-  }, [token]);
+  }, []);
 
   const bootstrap = useCallback(async () => {
     const existingToken = localStorage.getItem(STORAGE_KEYS.token);

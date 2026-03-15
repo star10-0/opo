@@ -85,7 +85,8 @@ function Register() {
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setErrors(error?.fieldErrors || {});
-      setGeneralError(error?.message || "تعذر إنشاء الحساب حاليًا");
+      const status = Number(error?.statusCode || 0);
+      setGeneralError(status >= 500 ? "حدث خطأ داخلي، حاول لاحقًا" : (error?.message || "تعذر إنشاء الحساب"));
     } finally {
       setLoading(false);
     }
