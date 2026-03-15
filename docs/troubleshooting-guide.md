@@ -101,3 +101,33 @@
 - أخطاء قاعدة بيانات متكررة.
 - اختلاف واضح بين أرقام التقارير والبيانات المصدرية.
 - عدم قدرة أي دور أساسي على إكمال المسار اليومي.
+
+
+---
+
+## 9) حصل تعارض عند الدمج (Merge Conflict)
+**الأعراض:** فشل الدمج مع رسائل تعارض خصوصًا داخل `backend/node_modules` أو ملفات المصادقة.
+
+**التحقق والحل السريع:**
+1. تأكد من عدم وجود علامات تعارض داخل الملفات:
+   ```bash
+   rg "^(<<<<<<<|=======|>>>>>>>)" backend fuel-frontend-v2 -n --glob '!**/node_modules/**'
+   ```
+2. إذا كان التعارض في ملفات مولدة داخل `backend/node_modules` فقط:
+   ```bash
+   git checkout -- backend/node_modules
+   ```
+3. أعد محاولة الدمج بعد تنظيف الشجرة:
+   ```bash
+   git status --short
+   ```
+4. إذا كان التعارض في `authService` أو `Login`:
+   - أبقِ المسارات النهائية التالية كما هي: 
+     - `POST /api/auth/login`
+     - `GET /api/auth/me`
+     - شاشة `Login` مع اختيار نوع الحساب.
+5. بعد الحل، شغّل التحقق:
+   ```bash
+   cd backend && node --check services/authService.js
+   cd ../fuel-frontend-v2 && npm run build
+   ```
