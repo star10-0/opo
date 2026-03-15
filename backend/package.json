@@ -8,7 +8,8 @@
     "dev": "node --watch server.js",
     "start:prod": "NODE_ENV=production node server.js",
     "healthcheck": "node -e \"const port=process.env.PORT||5000;fetch('http://localhost:'+port+'/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(()=>process.exit(0)).catch(()=>process.exit(1))\"",
-    "bootstrap:dev-admin": "node scripts/bootstrap-dev-admin.js"
+    "bootstrap:dev-admin": "node scripts/bootstrap-dev-admin.js",
+    "seed:auth-demo": "node scripts/seed-auth-demo-accounts.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

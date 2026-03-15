@@ -45,12 +45,23 @@ const unwrap = (response) => {
 };
 
 const normalizeError = (error) => {
+  if (import.meta.env.DEV && error?.response?.data) {
+    console.error("[api-error]", error.response.data);
+  }
+
+  const status = Number(error?.response?.status || 0);
   const message =
     error?.response?.data?.message ||
     (error?.code === "ECONNABORTED" ? "انتهت مهلة الاتصال بالخادم" : "") ||
     error?.message ||
     "حدث خطأ غير متوقع أثناء الاتصال بالخادم";
-  return new Error(message);
+
+  const normalized = new Error(message);
+  normalized.status = status;
+  if (error?.response?.data?.details && typeof error.response.data.details === "object") {
+    normalized.fieldErrors = error.response.data.details;
+  }
+  return normalized;
 };
 
 export async function apiGet(url, config) {

@@ -45,7 +45,11 @@ function Login() {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.message || "تعذر تسجيل الدخول، حاول مرة أخرى.");
+      const status = Number(err?.status || 0);
+      const message = status >= 500
+        ? "حدث خطأ في الخادم، حاول لاحقًا"
+        : (err?.message || "تعذر تسجيل الدخول");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -74,7 +78,8 @@ function Login() {
           <button type="submit" className="auth-btn" disabled={loading}>{loading ? "جارٍ تسجيل الدخول..." : "دخول"}</button>
         </form>
 
-        <div className="auth-footer">
+        <div className="auth-footer auth-footer-stack">
+          <Link to="/register">إنشاء حساب جديد</Link>
           <Link to="/" onClick={() => setAccountType("")}>الرجوع لاختيار نوع الحساب</Link>
         </div>
       </section>

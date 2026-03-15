@@ -123,11 +123,30 @@
 - الهدف: إغلاق جلسة سيارة توزيع
 
 ## Authentication
+### POST /api/auth/register
+- الهدف: إنشاء حساب جديد وتسجيل الدخول مباشرة
+- body:
+  - `name` (مطلوب، 3 أحرف على الأقل)
+  - `email` (مطلوب)
+  - `password` (مطلوب، 8+ مع حرف كبير ورقم)
+  - `confirmPassword` (مطابق لكلمة المرور)
+  - `accountType` (`individual` أو `company`)
+  - `stationName` (مطلوب إذا كان `accountType=individual`)
+  - `organizationName` (مطلوب إذا كان `accountType=company`)
+  - `role` (اختياري، الافتراضي `admin` في هذا التدفق)
+- success data:
+  - `token`
+  - `user`
+  - `accountType`
+  - `selectedStation`
+  - `availableStations`
+
 ### POST /api/auth/login
 - الهدف: تسجيل الدخول وإرجاع JWT + بيانات المستخدم الأساسية
 - body:
   - `email`
   - `password`
+  - `accountType` (اختياري، للتحقق من نوع الحساب)
 
 ## Reconciliation
 ### POST /api/reconciliation/:operationalDayId/review
